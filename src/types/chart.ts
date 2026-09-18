@@ -170,3 +170,19 @@ export interface PriceAlert {
   color: string;
   active: boolean;
 }
+
+/**
+ * Stock / Wall Street headline news item (TradingView News-tab style).
+ * Distinct from ForexNewsItem, which is the scheduled economic calendar
+ * (NFP, CPI, FOMC, etc). This is for live market headlines: Fed commentary,
+ * Wall St futures moves, index rallies, earnings reactions, etc.
+ */
+export interface StockNewsItem {
+  id: string;
+  title: string;
+  source: string;
+  link: string;
+  publishedAt: number; // epoch ms
+  formattedTime: string;
+  formattedDate: string;
+}
