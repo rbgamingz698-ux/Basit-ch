@@ -20,7 +20,9 @@ import { SUPPORTED_SYMBOLS } from '../services/marketData';
 interface RightSidebarProps {
   currentSymbol: string;
   onSelectSymbol: (sym: string) => void;
+}  
   lastPrice: number;
   priceChange: number;
   futureNewsCount?: number;
   onNewsCountChange?: (count: number) => void;
+}
