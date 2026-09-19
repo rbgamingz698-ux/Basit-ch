@@ -10,6 +10,43 @@
 
 import { CandleData, SymbolInfo, Timeframe } from '../types/chart';
 
+export function isWithinTradingHours(timestampSeconds: number): boolean {
+  const date = new Date(timestampSeconds * 1000);
+  const pktMs = date.getTime() + 5.5 * 3600 * 1000;
+  const pktDate = new Date(pktMs);
+  const day = pktDate.getUTCDay(); // 0: Sun, 1: Mon, ..., 6: Sat
+  const hour = pktDate.getUTCHours();
+  const minute = pktDate.getUTCMinutes();
+  const timeInMinutes = hour * 60 + minute;
+
+  // Saturday after 1:25 AM (1 * 60 + 25 = 85)
+  if (day === 6 && timeInMinutes >= 85) return false;
+
+  // Sunday: whole day closed
+  if (day === 0) return false;
+
+  // Monday before 1:25 AM (85 minutes)
+  if (day === 1 && timeInMinutes < 85) return false;
+
+  return true;
+}
+
+export function isMarketOpen(): boolean {
+  const now = new Date();
+  const pktMs = now.getTime() + 5.5 * 3600 * 1000;
+  const pktDate = new Date(pktMs);
+  const day = pktDate.getUTCDay();
+  const hour = pktDate.getUTCHours();
+  const minute = pktDate.getUTCMinutes();
+  const timeInMinutes = hour * 60 + minute;
+
+  if (day === 6 && timeInMinutes >= 85) return false;
+  if (day === 0) return false;
+  if (day === 1 && timeInMinutes < 85) return false;
+
+  return true;
+}
+
 export const SUPPORTED_SYMBOLS: SymbolInfo[] = [
   {
     symbol: 'US30',
@@ -183,7 +220,7 @@ export async function fetchMarketData(
       const c = closes[i];
       const v = volumes[i];
 
-      // Filter out null/undefined/NaN gaps
+      // Filter out null/undefined/NaN gaps and weekend candles (Saturday/Sunday)
       if (
         t &&
         t > lastTime &&
@@ -192,15 +229,18 @@ export async function fetchMarketData(
         Number.isFinite(l) &&
         Number.isFinite(c)
       ) {
-        parsedCandles.push({
-          time: t,
-          open: Number(o.toFixed(2)),
-          high: Number(h.toFixed(2)),
-          low: Number(l.toFixed(2)),
-          close: Number(c.toFixed(2)),
-          volume: Number.isFinite(v) ? v : 1000,
-        });
-        lastTime = t;
+        const date = new Date(t * 1000);
+        if (isWithinTradingHours(t)) {
+          parsedCandles.push({
+            time: t,
+            open: Number(o.toFixed(2)),
+            high: Number(h.toFixed(2)),
+            low: Number(l.toFixed(2)),
+            close: Number(c.toFixed(2)),
+            volume: Number.isFinite(v) ? v : 1000,
+          });
+          lastTime = t;
+        }
       }
     }
 

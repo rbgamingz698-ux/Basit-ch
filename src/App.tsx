@@ -15,25 +15,29 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import {
   CandleColorTheme,
   CandleData,
   ChartType,
   Timeframe,
+  NewsCategory,
 } from './types/chart';
-import { fetchMarketData, getSymbolInfo, SUPPORTED_SYMBOLS } from './services/marketData';
+import { fetchMarketData, getSymbolInfo, SUPPORTED_SYMBOLS, isMarketOpen } from './services/marketData';
 import { DEFAULT_THEME } from './utils/candleColors';
 import { TopBar } from './components/TopBar';
 import { TradingViewChart } from './components/TradingViewChart';
-import { RightSidebar } from './components/RightSidebar';
-import { BottomBar } from './components/BottomBar';
 import { CandleColorModal } from './components/CandleColorModal';
+import { ChartSettingsModal } from './components/ChartSettingsModal';
+import { NewsFeed } from './components/NewsFeed';
+import { GeminiAssistant } from './components/GeminiAssistant';
 
 export default function App() {
   // Chart Configuration State (Default: US30, 5m, Candlestick)
   const [symbol, setSymbol] = useState<string>('US30');
-  const [timeframe, setTimeframe] = useState<Timeframe>('5m');
+  const [timeframe, setTimeframe] = useState<Timeframe>('1m');
   const [chartType, setChartType] = useState<ChartType>('Candlestick');
+  const [newsCategory, setNewsCategory] = useState<NewsCategory>('Economy');
 
   // Candle Color Theme State (persisted in localStorage)
   const [candleTheme, setCandleTheme] = useState<CandleColorTheme>(() => {
@@ -58,16 +62,42 @@ export default function App() {
   const [dataSource, setDataSource] = useState<string>('Yahoo Finance');
   const [cacheSecondsLeft, setCacheSecondsLeft] = useState<number>(60);
 
-  // Layout: Default Horizontal landscape view (Chart ~70%, Upcoming News ~30%)
-  const [isNewsOpen, setIsNewsOpen] = useState<boolean>(true);
-  const [futureNewsCount, setFutureNewsCount] = useState<number>(0);
-
-  // Modals
-  const [isCandleColorOpen, setIsCandleColorOpen] = useState(false);
-
-  // Price tracking
+  // Price tracking and Fullscreen state
   const [livePrice, setLivePrice] = useState<number>(0);
   const [priceDelta, setPriceDelta] = useState<number>(0);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  // Layout: Default Horizontal landscape view (Chart ~70%, Upcoming News ~30%)
+  // Modals
+  const [isCandleColorOpen, setIsCandleColorOpen] = useState(false);
+  const [isChartSettingsOpen, setIsChartSettingsOpen] = useState(false);
+  const [chartSettings, setChartSettings] = useState({
+    events: { economicEvents: true, futureEventsOnly: true, latestNews: true },
+    canvas: { watermark: 'Replay mode', gridLines: true },
+  });
+
+  // Fullscreen toggle for the entire app using the browser Fullscreen API
+  const toggleFullAppFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.error('Error attempting to enable fullscreen:', err);
+      });
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   // Load Real Yahoo Finance Data
   const loadData = useCallback(async (sym: string, tf: Timeframe, force: boolean = false) => {
@@ -98,18 +128,19 @@ export default function App() {
     loadData(symbol, timeframe, false);
   }, [symbol, timeframe, loadData]);
 
-  // 60-Second Cache Countdown and Auto-Refresh timer
+  // 2-Second Auto-Refresh timer when market is open for real-time live Yahoo Finance candle streaming
   useEffect(() => {
     const timer = setInterval(() => {
       setCacheSecondsLeft((prev) => {
-        if (prev <= 1) {
-          // Trigger silent background refresh from Yahoo Finance
-          loadData(symbol, timeframe, true);
+        if (prev <= 2) {
+          if (isMarketOpen()) {
+            loadData(symbol, timeframe, true);
+          }
           return 60;
         }
-        return prev - 1;
+        return prev - 2;
       });
-    }, 1000);
+    }, 2000);
 
     return () => clearInterval(timer);
   }, [symbol, timeframe, loadData]);
@@ -120,6 +151,7 @@ export default function App() {
 
   useEffect(() => {
     const tickInterval = setInterval(() => {
+      if (!isMarketOpen()) return; // Stop price updates when market is closed (weekends)
       if (activeCandlesRef.current.length === 0) return;
 
       setCandles((prev) => {
@@ -164,19 +196,16 @@ export default function App() {
         onOpenCandleColorModal={() => setIsCandleColorOpen(true)}
         lastPrice={livePrice}
         priceChange={priceDelta}
-        isNewsOpen={isNewsOpen}
-        onToggleNews={() => setIsNewsOpen(!isNewsOpen)}
-        futureNewsCount={futureNewsCount}
         onRefreshData={() => loadData(symbol, timeframe, true)}
         isLoadingData={loading}
         dataSource={dataSource}
         cacheSecondsLeft={cacheSecondsLeft}
       />
 
-      {/* 2. MAIN WORKSPACE: Side-by-side landscape design (Chart + Upcoming Economic News) */}
-      <div className="flex flex-1 flex-row w-full h-[calc(100vh-3.5rem-2rem)] overflow-hidden bg-[#131722]">
+      {/* 2. MAIN WORKSPACE: Fully Horizontal layout (Chart + Horizontal News Row) */}
+      <div className="flex flex-1 flex-col w-full h-[calc(100vh-3.5rem-2rem)] overflow-hidden bg-[#131722]">
         {/* Dark TradingView Chart Canvas */}
-        <main className="flex-1 h-full overflow-hidden bg-[#131722] relative">
+        <main className="flex-1 w-full overflow-hidden bg-[#131722] relative">
           <TradingViewChart
             symbolInfo={symInfo}
             timeframe={timeframe}
@@ -184,6 +213,16 @@ export default function App() {
             candles={candles}
             candleTheme={candleTheme}
           />
+
+          {/* Fullscreen Toggle Floating Button for Whole App */}
+          <button
+            onClick={toggleFullAppFullscreen}
+            className="absolute top-3 right-3 z-30 p-2 rounded-lg bg-[#1e222d]/90 hover:bg-[#2a2e39] text-[#d1d4dc] hover:text-white border border-[#2a2e39] transition-all shadow-lg flex items-center gap-1.5 text-xs cursor-pointer"
+            title={isFullscreen ? 'Exit Whole App Fullscreen' : 'Maximize Whole App Fullscreen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-amber-400" /> : <Maximize2 className="w-4 h-4 text-amber-400" />}
+            <span className="hidden sm:inline font-mono text-[11px]">{isFullscreen ? 'Exit Fullscreen' : 'Whole App Fullscreen'}</span>
+          </button>
 
           {/* Loading Indicator */}
           {loading && (
@@ -197,27 +236,17 @@ export default function App() {
             </div>
           )}
         </main>
-
-        {/* Future Economic News & Watchlist Panel */}
-        <RightSidebar
-          currentSymbol={symbol}
-          onSelectSymbol={(sym) => setSymbol(sym)}
-          lastPrice={livePrice}
-          priceChange={priceDelta}
-          futureNewsCount={futureNewsCount}
-          onNewsCountChange={setFutureNewsCount}
-          isCollapsed={!isNewsOpen}
-          onToggleCollapse={() => setIsNewsOpen(!isNewsOpen)}
-        />
+        
+        {/* Horizontal News Ticker / Row at bottom */}
+        <div className="h-44 border-t border-[#2a2e39] bg-[#131722] w-full shrink-0">
+            <NewsFeed category={newsCategory} onSelectCategory={setNewsCategory} horizontal={true} />
+        </div>
       </div>
 
-      {/* 3. BOTTOM TICKER BAR */}
-      <BottomBar
-        currentSymbol={symbol}
-        onSelectSymbol={setSymbol}
-        lastPrice={livePrice}
-      />
-
+      {/* 3. BOTTOM SETTINGS BAR */}
+      <div className="h-12 bg-[#131722] border-t border-[#2a2e39] flex items-center px-4 gap-2">
+          <span className="text-[10px] text-[#787b86]">BT Morgan Terminal</span>
+      </div>
       {/* 4. CANDLE COLOR THEME MODAL */}
       <CandleColorModal
         isOpen={isCandleColorOpen}
@@ -225,6 +254,17 @@ export default function App() {
         currentTheme={candleTheme}
         onChangeTheme={handleUpdateCandleTheme}
       />
+      
+      {/* 5. CHART SETTINGS MODAL */}
+      <ChartSettingsModal
+        isOpen={isChartSettingsOpen}
+        onClose={() => setIsChartSettingsOpen(false)}
+        settings={chartSettings}
+        onChangeSettings={setChartSettings}
+      />
+
+      {/* 6. GEMINI AI ASSISTANT CHATBOT */}
+      <GeminiAssistant currentSymbol={symbol} currentTimeframe={timeframe} />
     </div>
   );
 }

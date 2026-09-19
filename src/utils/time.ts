@@ -32,7 +32,13 @@ export function formatPktDateTime(unixSeconds: number): string {
   const y = pkt.getFullYear();
   const m = String(pkt.getMonth() + 1).padStart(2, '0');
   const d = String(pkt.getDate()).padStart(2, '0');
-  const hh = String(pkt.getHours()).padStart(2, '0');
-  const mm = String(pkt.getMinutes()).padStart(2, '0');
-  return `${y}-${m}-${d} ${hh}:${mm} PKT`;
+  
+  let hours = pkt.getHours();
+  const minutes = String(pkt.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // the hour '0' should be '12'
+  const strHours = String(hours).padStart(2, '0');
+
+  return `${y}-${m}-${d} ${strHours}:${minutes} ${ampm} PKT`;
 }

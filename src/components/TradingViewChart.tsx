@@ -78,6 +78,7 @@ export const TradingViewChart: React.FC<RealtimeCandleChartProps> = ({
         textColor: '#787b86',
         fontSize: 11,
       },
+      watermark: { visible: false },
       grid: {
         vertLines: { color: '#1e222d' },
         horzLines: { color: '#1e222d' },
@@ -309,6 +310,9 @@ export const TradingViewChart: React.FC<RealtimeCandleChartProps> = ({
     barSeriesRef.current?.applyOptions({ priceFormat });
     lineSeriesRef.current?.applyOptions({ priceFormat });
     areaSeriesRef.current?.applyOptions({ priceFormat });
+    
+    // Fix: Reset view when symbol changes
+    chartRef.current?.timeScale().fitContent();
   }, [symbolInfo]);
 
   // Update Series Visibility when ChartType changes
@@ -402,37 +406,10 @@ export const TradingViewChart: React.FC<RealtimeCandleChartProps> = ({
 
   return (
     <div className="relative w-full h-full bg-[#131722] overflow-hidden select-none">
-      {/* Real-time OHLC Legend Header */}
-      <div className="absolute top-3 left-3 z-20 flex items-center flex-wrap gap-2 text-[11px] font-mono pointer-events-none bg-[#131722]/85 backdrop-blur-xs px-3 py-1.5 rounded-lg border border-[#2a2e39]/80 shadow-md">
-        <span className="font-bold text-white tracking-wide">{symbolInfo.symbol}</span>
-        <span className="text-[#787b86]">{timeframe}</span>
-
-        {legendData && (
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="text-[#787b86]">
-              O: <span className="text-white font-medium">{legendData.open.toFixed(symbolInfo.precision)}</span>
-            </span>
-            <span className="text-[#787b86]">
-              H: <span className="text-white font-medium">{legendData.high.toFixed(symbolInfo.precision)}</span>
-            </span>
-            <span className="text-[#787b86]">
-              L: <span className="text-white font-medium">{legendData.low.toFixed(symbolInfo.precision)}</span>
-            </span>
-            <span className="text-[#787b86]">
-              C: <span className="text-white font-medium">{legendData.close.toFixed(symbolInfo.precision)}</span>
-            </span>
-            <span
-              style={{
-                color: legendData.change >= 0 ? candleTheme.upColor : candleTheme.downColor,
-              }}
-              className="font-semibold"
-            >
-              {legendData.change >= 0 ? '+' : ''}
-              {legendData.change.toFixed(symbolInfo.precision === 5 ? 4 : 2)} (
-              {legendData.changePercent.toFixed(2)}%)
-            </span>
-          </div>
-        )}
+      {/* Watermark Header */}
+      <div className="absolute top-3 left-3 z-20 flex items-center gap-2 text-[13px] font-serif italic pointer-events-none bg-[#131722]/85 backdrop-blur-xs px-4 py-2 rounded-md border border-[#D4AF37]/30 shadow-md">
+        <span className="font-bold text-[#D4AF37] tracking-widest uppercase">BT MORGAN</span>
+        <span className="text-[#B22222] font-semibold text-[11px] not-italic tracking-normal">The Hidden Power®</span>
       </div>
 
       {/* Chart Canvas */}

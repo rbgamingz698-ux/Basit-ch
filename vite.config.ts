@@ -57,7 +57,7 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss(), yahooChartPlugin()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(import.meta.dirname, '.'),
       },
     },
     server: {
