@@ -350,3 +350,5 @@ export function calculateHeikinAshi(candles: CandleData[]): CandleData[] {
 
   return haCandles;
 }
+
+export const fetchCandles = fetchMarketData;

@@ -8,6 +8,8 @@ import {
   Search,
   LayoutGrid,
   Newspaper,
+  Calendar,
+  Layers,
 } from 'lucide-react';
 import { CandleColorTheme, ChartType, Timeframe } from '../types/chart';
 import { getSymbolInfo, isMarketOpen } from '../services/marketData';
@@ -33,6 +35,12 @@ interface TopBarProps {
   language?: Language;
   onChangeLanguage?: (lang: Language) => void;
   onTriggerNewsPopup?: () => void;
+  onToggleStocksNews?: () => void;
+  isStocksNewsOpen?: boolean;
+  onToggleCalendar?: () => void;
+  isCalendarOpen?: boolean;
+  onToggleStockDetail?: () => void;
+  isStockDetailOpen?: boolean;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -55,6 +63,12 @@ export const TopBar: React.FC<TopBarProps> = ({
   language = 'EN',
   onChangeLanguage,
   onTriggerNewsPopup,
+  onToggleStocksNews,
+  isStocksNewsOpen,
+  onToggleCalendar,
+  isCalendarOpen,
+  onToggleStockDetail,
+  isStockDetailOpen,
 }) => {
   const symbolInfo = getSymbolInfo(symbol);
   const marketOpen = isMarketOpen();
@@ -86,6 +100,21 @@ export const TopBar: React.FC<TopBarProps> = ({
             </span>
             <ChevronDown className="w-3 h-3 text-[#787b86] group-hover:text-white transition-colors ml-0.5" />
           </button>
+
+          {/* Toggle Left Stock Detail Drawer */}
+          {onToggleStockDetail && (
+            <button
+              onClick={onToggleStockDetail}
+              className={`p-1.5 rounded-lg border transition-all cursor-pointer shadow-xs ${
+                isStockDetailOpen
+                  ? 'bg-[#2962FF] text-white border-[#2962FF]'
+                  : 'bg-[#1e222d] hover:bg-[#2a2e39] text-[#787b86] hover:text-white border-[#2a2e39]'
+              }`}
+              title={isStockDetailOpen ? 'Hide Stock Overview Panel' : 'Show Stock Overview Panel'}
+            >
+              <Layers className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* 2. TIMEFRAME SELECTOR & CHART TYPE & THEME BUTTON */}
@@ -178,6 +207,41 @@ export const TopBar: React.FC<TopBarProps> = ({
             <span className="text-emerald-400 font-bold">{t.yahooFinance}</span>
             <span className="text-[#787b86]">({cacheSecondsLeft}s)</span>
           </div>
+
+          {/* Stocks News Trigger Button */}
+          {onToggleStocksNews && (
+            <button
+              id="stocks-news-topbar-btn"
+              onClick={onToggleStocksNews}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[10px] font-bold shadow-xs whitespace-nowrap ${
+                isStocksNewsOpen
+                  ? 'bg-amber-500 text-black border-amber-400 font-extrabold'
+                  : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 hover:text-amber-300 border-amber-500/30'
+              }`}
+              title="Toggle Live Stocks & Market News Panel"
+            >
+              <Newspaper className="w-3.5 h-3.5 text-amber-400" />
+              <span>Stocks News</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            </button>
+          )}
+
+          {/* Economic Calendar Trigger Button */}
+          {onToggleCalendar && (
+            <button
+              id="calendar-topbar-btn"
+              onClick={onToggleCalendar}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[10px] font-bold shadow-xs whitespace-nowrap ${
+                isCalendarOpen
+                  ? 'bg-rose-500 text-white border-rose-400 font-extrabold'
+                  : 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 hover:text-rose-300 border-rose-500/30'
+              }`}
+              title="Toggle Upcoming Economic Calendar"
+            >
+              <Calendar className="w-3.5 h-3.5 text-rose-400" />
+              <span>Calendar</span>
+            </button>
+          )}
 
           {/* News Alert Popup Trigger */}
           {onTriggerNewsPopup && (

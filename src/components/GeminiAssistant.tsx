@@ -16,7 +16,7 @@ export const GeminiAssistant: React.FC<GeminiAssistantProps> = ({ currentSymbol,
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'model',
-      text: `DEAR PROFESSIONAL TRADER! I am your BT Morgan AI Assistant. I can explore and explain this terminal, analyze ${currentSymbol} ${currentTimeframe} charts, summarize economic events, and help with trading strategies. How can I assist you today?`
+      text: `Greetings trader! I am your BT Morgan AI Assistant. I can explore and explain this terminal, analyze ${currentSymbol} ${currentTimeframe} charts, summarize economic events, and help with trading strategies. How can I assist you today?`
     }
   ]);
   const [input, setInput] = useState('');

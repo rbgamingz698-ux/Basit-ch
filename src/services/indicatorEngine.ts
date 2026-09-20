@@ -1110,16 +1110,6 @@ export function calculateVWAP(candles: CandleData[]): { time: number; value: num
   });
 }
 
-export function calculateVolumeProfile(candles: CandleData[]): { price: number; volume: number }[] {
-  const levels = new Map<number, number>();
-  candles.forEach(c => {
-    const vol = c.volume ?? 0;
-    const price = Math.round(c.close * 10) / 10;
-    levels.set(price, (levels.get(price) || 0) + vol);
-  });
-  return Array.from(levels.entries()).map(([price, volume]) => ({ price, volume }));
-}
-
 export function calculateCumulativeDelta(candles: CandleData[]): { time: number; value: number }[] {
   let delta = 0;
   return candles.map(c => {

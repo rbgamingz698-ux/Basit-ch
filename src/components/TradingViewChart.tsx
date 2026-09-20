@@ -730,8 +730,6 @@ export const TradingViewChart: React.FC<RealtimeCandleChartProps> = ({
         </div>
       )}
 
-      <div className="absolute top-3 left-3 z-30 flex gap-1 bg-[#1e222d] border border-[#2a2e39] p-1 rounded-lg shadow-xl" />
-
       {/* Chart Canvas */}
       <div 
         ref={chartContainerRef} 
