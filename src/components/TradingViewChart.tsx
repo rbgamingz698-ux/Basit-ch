@@ -80,60 +80,12 @@ export const TradingViewChart: React.FC<RealtimeCandleChartProps> = ({
     timeStr: string;
   } | null>(null);
 
-  const [activeTool, setActiveTool] = useState<'rectangle' | 'line' | 'vp' | null>(null);
-  const [isDrawVpMode, setIsDrawVpMode] = useState(false);
-  const [manualVPs, setManualVPs] = useState<{ id: string; low: number; high: number; vpData: { price: number; volume: number }[]; xPosition: number }[]>([]);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [drawingStartPrice, setDrawingStartPrice] = useState<number | null>(null);
-
   const candlesRef = useRef<CandleData[]>(candles);
   candlesRef.current = candles;
 
   const lastSymbolRef = useRef<string>(symbolInfo.symbol);
   const lastTimeframeRef = useRef<string>(timeframe);
   const initialFitDoneRef = useRef(false);
-  
-  // Mouse event handlers for manual drawing
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isDrawVpMode || !chartRef.current) return;
-    setIsDrawing(true);
-    const price = (chartRef.current.priceScale('right') as any).coordinateToPrice(e.clientY - chartContainerRef.current!.getBoundingClientRect().top);
-    setDrawingStartPrice(price);
-  };
-
-  const handleMouseUp = (e: React.MouseEvent) => {
-    if (!isDrawVpMode || !isDrawing || !chartRef.current || drawingStartPrice === null) return;
-    setIsDrawing(false);
-    const endPrice = (chartRef.current.priceScale('right') as any).coordinateToPrice(e.clientY - chartContainerRef.current!.getBoundingClientRect().top);
-    const low = Math.min(drawingStartPrice, endPrice);
-    const high = Math.max(drawingStartPrice, endPrice);
-    setDrawingStartPrice(null);
-
-    // Filter candles and calculate VP
-    const filteredCandles = candlesRef.current.filter(c => (c.low >= low && c.low <= high) || (c.high >= low && c.high <= high));
-    
-    // Simple calculation of VP with 24 bins
-    const bins: { price: number; volume: number }[] = [];
-    const binSize = (high - low) / 24;
-    for (let i = 0; i < 24; i++) {
-        bins.push({ price: low + i * binSize, volume: 0 });
-    }
-    filteredCandles.forEach(c => {
-        const binIndex = Math.floor(((c.close - low) / (high - low)) * 24);
-        if (binIndex >= 0 && binIndex < 24) {
-            bins[binIndex].volume += (c.volume ?? 0);
-        }
-    });
-
-    const newVP = {
-        id: Date.now().toString(),
-        low,
-        high,
-        vpData: bins,
-        xPosition: 100 // Simplified xPosition for now
-    };
-    setManualVPs([...manualVPs, newVP]);
-  };
 
   // Initialize Chart and Core Series (Candles, Bar, Line, Area)
   useEffect(() => {
@@ -334,7 +286,6 @@ export const TradingViewChart: React.FC<RealtimeCandleChartProps> = ({
         // Guard against transient frame unmounts
       }
     });
-
 
     // Resize Observer for fluid responsiveness
     const resizeObserver = new ResizeObserver((entries) => {
@@ -779,22 +730,12 @@ export const TradingViewChart: React.FC<RealtimeCandleChartProps> = ({
         </div>
       )}
 
-      <div className="absolute top-3 left-3 z-30 flex gap-1 bg-[#1e222d] border border-[#2a2e39] p-1 rounded-lg shadow-xl">
-        <button
-          onClick={() => setIsDrawVpMode(!isDrawVpMode)}
-          className={`p-2 rounded ${isDrawVpMode ? 'bg-[#2962FF] text-white' : 'text-[#787b86] hover:bg-[#2a2e39]'}`}
-          title="Toggle Draw Volume Profile Mode"
-        >
-          <BarChart2 className="w-4 h-4" />
-        </button>
-      </div>
+      <div className="absolute top-3 left-3 z-30 flex gap-1 bg-[#1e222d] border border-[#2a2e39] p-1 rounded-lg shadow-xl" />
 
       {/* Chart Canvas */}
       <div 
         ref={chartContainerRef} 
         className="w-full h-full" 
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
       />
 
       {/* Indicator Overlay (FVG, Sessions, Order Blocks, Liquidity) */}
@@ -804,14 +745,6 @@ export const TradingViewChart: React.FC<RealtimeCandleChartProps> = ({
         candles={candles}
         activeIndicators={activeIndicators}
       />
-
-      {/* Render Manual VPs */}
-      {manualVPs.map(vp => (
-        <div key={vp.id} className="absolute z-40 bg-[#1e222d]/80 border border-[#2a2e39] p-2 rounded shadow-lg pointer-events-none" style={{ top: '10%', right: '10px' }}>
-             <button onClick={() => setManualVPs(manualVPs.filter(m => m.id !== vp.id))} className="absolute top-0 right-0 p-1 text-xs text-rose-400 pointer-events-auto">X</button>
-             <div className="text-[10px] text-white">Manual VP</div>
-        </div>
-      ))}
     </div>
   );
 };
