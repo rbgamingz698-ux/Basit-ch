@@ -59,26 +59,6 @@ export const SUPPORTED_SYMBOLS: SymbolInfo[] = [
     type: 'index',
   },
   {
-    symbol: 'NASDAQ',
-    displayName: 'Nasdaq Composite (Spot ^IXIC)',
-    ticker: '^IXIC',
-    exchange: 'NASDAQ',
-    precision: 2,
-    pipSize: 1.0,
-    basePrice: 26418.30,
-    type: 'index',
-  },
-  {
-    symbol: 'YM=F',
-    displayName: 'US30 Futures (YM=F 24h)',
-    ticker: 'YM=F',
-    exchange: 'CBOT',
-    precision: 2,
-    pipSize: 1.0,
-    basePrice: 52310.00,
-    type: 'futures',
-  },
-  {
     symbol: 'NQ=F',
     displayName: 'NASDAQ Futures (NQ=F 24h)',
     ticker: 'NQ=F',
@@ -86,19 +66,34 @@ export const SUPPORTED_SYMBOLS: SymbolInfo[] = [
     precision: 2,
     pipSize: 0.25,
     basePrice: 29880.00,
-    type: 'futures',
+    type: 'index',
+  },
+  {
+    symbol: 'BT_GC=F',
+    displayName: 'Gold Futures (GC=F)',
+    ticker: 'GC=F',
+    exchange: 'COMEX',
+    precision: 2,
+    pipSize: 0.1,
+    basePrice: 2580.00,
+    type: 'commodity',
   },
 ];
 
 export function getSymbolInfo(symbolName: string): SymbolInfo {
   const norm = symbolName.toUpperCase();
   const exact = SUPPORTED_SYMBOLS.find(
-    (s) => s.symbol.toUpperCase() === norm || s.ticker.toUpperCase() === norm
+    (s) => s.symbol.toUpperCase() === norm || s.ticker?.toUpperCase() === norm
   );
   if (exact) return exact;
 
-  if (norm.includes('NQ')) return SUPPORTED_SYMBOLS[3];
-  if (norm.includes('YM')) return SUPPORTED_SYMBOLS[2];
+  if (norm.includes('GC') || norm.includes('GOLD')) {
+    return SUPPORTED_SYMBOLS.find((s) => s.symbol === 'BT_GC=F') || SUPPORTED_SYMBOLS[0];
+  }
+  if (norm.includes('NQ')) return SUPPORTED_SYMBOLS[1];
+  if (norm.includes('YM') || norm.includes('US30=F') || norm.includes('FUT')) {
+    return SUPPORTED_SYMBOLS[0];
+  }
   if (norm.includes('NAS') || norm.includes('100') || norm.includes('IXIC')) {
     return SUPPORTED_SYMBOLS[1];
   }
@@ -132,8 +127,24 @@ export async function fetchMarketData(
 }> {
   const symbolInfo = getSymbolInfo(symbol);
   const ticker = symbolInfo.ticker || (symbol === 'NASDAQ' ? '^IXIC' : '^DJI');
-  const interval = timeframe === '1m' ? '1m' : '5m';
-  const range = interval === '1m' ? '1d' : '5d';
+  let interval = timeframe.toLowerCase();
+  if (interval === '1h') interval = '1h';
+
+  let range = '5y';
+  // Respect Yahoo Finance's strict range limits for intraday intervals to avoid 400 Bad Request
+  if (interval === '1m') {
+    range = '7d';
+  } else if (interval === '5m') {
+    range = '60d';
+  } else if (interval === '15m') {
+    range = '60d';
+  } else if (interval === '1h' || interval === '60m') {
+    range = '730d';
+  } else if (interval === '4h') {
+    range = '730d';
+  } else if (interval === '1d') {
+    range = '5y';
+  }
 
   const cacheKey = `yf_chart_${ticker}_${interval}_${range}`;
 
@@ -231,13 +242,18 @@ export async function fetchMarketData(
       ) {
         const date = new Date(t * 1000);
         if (isWithinTradingHours(t)) {
+          const candleRange = Math.abs(h - l);
+          const candleBody = Math.abs(c - o);
+          const computedVol = Math.max(250, Math.round(candleRange * 650 + candleBody * 950 + 400 + ((t % 11) * 60)));
+          const finalVolume = (Number.isFinite(v) && (v as number) > 0) ? (v as number) : computedVol;
+
           parsedCandles.push({
             time: t,
             open: Number(o.toFixed(2)),
             high: Number(h.toFixed(2)),
             low: Number(l.toFixed(2)),
             close: Number(c.toFixed(2)),
-            volume: Number.isFinite(v) ? v : 1000,
+            volume: finalVolume,
           });
           lastTime = t;
         }

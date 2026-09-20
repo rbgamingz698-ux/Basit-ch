@@ -2,11 +2,41 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function() {
+        var OriginalWebSocket = window.WebSocket;
+        if (OriginalWebSocket) {
+          window.WebSocket = function(url, protocols) {
+            if (typeof url === 'string' && (url.includes('vite') || url.includes('3000') || url.includes('localhost') || url.includes('127.0.0.1') || url.includes('ws'))) {
+              return {
+                url: url,
+                readyState: 3, // CLOSED
+                bufferedAmount: 0,
+                extensions: "",
+                protocol: protocols || "",
+                binaryType: "blob",
+                send: function() {},
+                close: function() {},
+                addEventListener: function() {},
+                removeEventListener: function() {},
+                onopen: null,
+                onmessage: null,
+                onerror: null,
+                onclose: null
+              };
+            }
+            return new OriginalWebSocket(url, protocols);
+          };
+          Object.setPrototypeOf(window.WebSocket, OriginalWebSocket);
+          window.WebSocket.prototype = OriginalWebSocket.prototype;
+        }
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>US30 Liquidity Chart Pro</title>
-    <meta name="description" content="Real-time financial charting workstation connected to Yahoo Finance v8 chart API for US30 (^DJI) and NASDAQ (^IXIC) with dynamic 1m and 5m timeframe switching, PKT (UTC+5:30) time formatting, and custom candle palettes." />
+    <meta name="description" content="Real-time financial charting workstation connected to Yahoo Finance v8 chart API for US30 (^DJI) and NASDAQ (^IXIC) with Smart Money Concepts (FVG, Sessions, Order Blocks, Liquidity Zones), custom Pine Script engine, and live active indicators toggle." />
     <meta property="og:title" content="US30 Liquidity Chart Pro" />
-    <meta property="og:description" content="Real-time financial charting workstation connected to Yahoo Finance v8 chart API for US30 (^DJI) and NASDAQ (^IXIC) with dynamic 1m and 5m timeframe switching, PKT (UTC+5:30) time formatting, and custom candle palettes." />
+    <meta property="og:description" content="Real-time financial charting workstation connected to Yahoo Finance v8 chart API for US30 (^DJI) and NASDAQ (^IXIC) with Smart Money Concepts (FVG, Sessions, Order Blocks, Liquidity Zones), custom Pine Script engine, and live active indicators toggle." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="preconnect" href="https://fonts.googleapis.com">

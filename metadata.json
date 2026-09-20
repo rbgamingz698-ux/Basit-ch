@@ -1,6 +1,6 @@
 {
-  "name": "US30 Liquidity Chart Pro",
-  "description": "Real-time financial charting workstation connected to Yahoo Finance v8 chart API for US30 (^DJI) and NASDAQ (^IXIC) with dynamic 1m and 5m timeframe switching, PKT (UTC+5:30) time formatting, and custom candle palettes.",
+  "name": "TradingView Fixed Range Volume Profile",
+  "description": "TradingView Fixed Range Volume Profile clone featuring custom interactive HTML5 canvas chart engine, manual drag volume profiles, Pakistan Time (PKT) session range profiling, Point of Control (POC), Value Area High/Low (VAH/VAL) analytics, and customizable timeframe/bin options.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

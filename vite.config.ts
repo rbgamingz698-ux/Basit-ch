@@ -26,6 +26,7 @@ function yahooChartPlugin(): Plugin {
           // Normalize symbol shorthand
           if (symbol === 'US30') symbol = '^DJI';
           if (symbol === 'NASDAQ' || symbol === 'US100') symbol = '^IXIC';
+          if (symbol === 'BT_GC=F') symbol = 'GC=F';
 
           const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}`;
 
@@ -61,8 +62,8 @@ export default defineConfig(() => {
       },
     },
     server: {
-      hmr: process.env.DISABLE_HMR !== 'true',
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      hmr: false,
+      watch: null,
       proxy: {
         '/api/yahoo-chart': {
           target: 'https://query1.finance.yahoo.com',

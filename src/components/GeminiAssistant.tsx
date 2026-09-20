@@ -135,7 +135,7 @@ export const GeminiAssistant: React.FC<GeminiAssistantProps> = ({ currentSymbol,
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#0b0d14]">
             {messages.map((m, idx) => (
               <div
-                key={idx}
+                key={`${m.role}-${idx}-${m.text.substring(0, 10)}`}
                 className={`flex items-start gap-2.5 ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
               >
                 <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
@@ -155,7 +155,7 @@ export const GeminiAssistant: React.FC<GeminiAssistantProps> = ({ currentSymbol,
             {loading && (
               <div className="flex items-center gap-2 text-[#787b86] text-xs font-mono p-2">
                 <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#2962FF]" />
-                <span>Gemini is analyzing market data...</span>
+                <span>BT Morgan AI is thinking...</span>
               </div>
             )}
             <div ref={messagesEndRef} />
