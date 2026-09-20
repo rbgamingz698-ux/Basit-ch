@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Activity, BarChart2, Clock, MoreHorizontal, Plus, Search, ChevronLeft, ChevronRight, CircleDashed, Sparkles } from 'lucide-react';
+import { BarChart2, Activity, Clock } from 'lucide-react';
 
 export interface Candle {
   time: number;
@@ -18,12 +18,12 @@ export interface Asset {
 }
 
 const ASSETS: Asset[] = [
-  { symbol: 'US30', name: 'Dow Jones', basePrice: 51682, decimals: 2, tickSize: 0.01 },
-  { symbol: 'NQ-F', name: 'NASDAQ 100', basePrice: 19850, decimals: 0, tickSize: 0.25 },
-  { symbol: 'GC=F', name: 'Gold Futures', basePrice: 2580, decimals: 1, tickSize: 0.1 },
+  { symbol: 'GC=F', name: 'Gold Futures (Comex)', basePrice: 2580, decimals: 1, tickSize: 0.1 },
+  { symbol: 'NQ=F', name: 'NASDAQ 100 Futures', basePrice: 19850, decimals: 0, tickSize: 0.25 },
+  { symbol: 'YM=F', name: 'Dow Jones Mini Futures', basePrice: 41800, decimals: 0, tickSize: 1.0 },
 ];
 
-export function generateSyntheticHistory(symbol: string, timeframe: string, count: number = 1500): Candle[] {
+export function generateSyntheticHistory(symbol: string, timeframe: string, count: number = 1000): Candle[] {
   const asset = ASSETS.find(a => a.symbol === symbol) || ASSETS[0];
   const candles: Candle[] = [];
 
@@ -37,7 +37,6 @@ export function generateSyntheticHistory(symbol: string, timeframe: string, coun
   let currentPrice = asset.basePrice;
   let currentTimestamp = Math.floor(Date.now() / 1000) - count * spacing;
   let seed = symbol.charCodeAt(0) + symbol.charCodeAt(1) + timeframe.charCodeAt(0);
-
   const random = () => {
     const value = Math.sin(seed++) * 10000;
     return value - Math.floor(value);
@@ -58,8 +57,8 @@ export function generateSyntheticHistory(symbol: string, timeframe: string, coun
     const percentChange = (random() - 0.49) * 2 * volatility + directionalBias;
     const open = currentPrice;
     const close = currentPrice * (1 + percentChange);
-    const wickHigh = Math.max(open, close) * (1 + random() * volatility * 0.5);
-    const wickLow = Math.min(open, close) * (1 - random() * volatility * 0.5);
+    const wickHigh = Math.max(open, close) * (1 + random() * volatility * 0.4);
+    const wickLow = Math.min(open, close) * (1 - random() * volatility * 0.4);
 
     candles.push({
       time: currentTimestamp,
@@ -76,8 +75,8 @@ export function generateSyntheticHistory(symbol: string, timeframe: string, coun
 }
 
 export default function App() {
-  const [selectedSymbol, setSelectedSymbol] = useState('US30');
-  const [timeframe, setTimeframe] = useState('1m');
+  const [selectedSymbol, setSelectedSymbol] = useState('GC=F');
+  const [timeframe, setTimeframe] = useState('5m');
   const [candles, setCandles] = useState<Candle[]>([]);
   const [zoomLevel, setZoomLevel] = useState(1.2);
   const [scrollOffset, setScrollOffset] = useState(0);
@@ -89,20 +88,20 @@ export default function App() {
   const activeAsset = useMemo(() => ASSETS.find(a => a.symbol === selectedSymbol) || ASSETS[0], [selectedSymbol]);
 
   useEffect(() => {
-    const data = generateSyntheticHistory(selectedSymbol, timeframe, 1200);
+    const data = generateSyntheticHistory(selectedSymbol, timeframe, 2000);
     setCandles(data);
 
     if (data.length > 0) {
-      const recent = data.slice(-80);
+      const recent = data.slice(-100);
       const minPrice = Math.min(...recent.map(c => c.low));
       const maxPrice = Math.max(...recent.map(c => c.high));
-      const padding = (maxPrice - minPrice) * 0.18 || 10;
+      const padding = (maxPrice - minPrice) * 0.15 || 10;
       setPriceRange({ min: minPrice - padding, max: maxPrice + padding });
     }
   }, [selectedSymbol, timeframe]);
 
   const RIGHT_AXIS_WIDTH = 75;
-  const BOTTOM_AXIS_HEIGHT = 24;
+  const BOTTOM_AXIS_HEIGHT = 30;
 
   const getCanvasDimensions = () => {
     if (!canvasRef.current) return { width: 800, height: 500, chartWidth: 725, chartHeight: 470 };
@@ -143,15 +142,13 @@ export default function App() {
     if (!canvas || !ctx) return;
 
     const { width, height, chartWidth, chartHeight } = getCanvasDimensions();
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#0d1728';
+    ctx.fillStyle = '#131722';
     ctx.fillRect(0, 0, width, height);
-
-    // grid / price lines
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.17)';
+    ctx.strokeStyle = '#2a2e39';
     ctx.lineWidth = 1;
-    const priceStep = (priceRange.max - priceRange.min) / 8;
-    for (let i = 0; i <= 8; i++) {
+
+    const priceStep = (priceRange.max - priceRange.min) / 10;
+    for (let i = 0; i <= 10; i++) {
       const price = priceRange.min + i * priceStep;
       const y = priceToPixel(price);
       if (y < 0 || y > chartHeight) continue;
@@ -159,10 +156,13 @@ export default function App() {
       ctx.moveTo(0, y);
       ctx.lineTo(chartWidth, y);
       ctx.stroke();
+      ctx.fillStyle = '#9fb3c8';
+      ctx.font = '10px sans-serif';
+      ctx.fillText(price.toFixed(activeAsset.decimals), chartWidth + 5, y + 4);
     }
 
     if (candles.length > 0) {
-      const gridCount = 5;
+      const gridCount = 8;
       const totalSeconds = candles[candles.length - 1].time - candles[0].time;
       for (let i = 0; i <= gridCount; i++) {
         const targetTime = candles[0].time + i * totalSeconds / gridCount;
@@ -172,35 +172,34 @@ export default function App() {
         ctx.moveTo(x, 0);
         ctx.lineTo(x, chartHeight);
         ctx.stroke();
+        const date = new Date(targetTime * 1000);
+        ctx.fillStyle = '#829ab1';
+        ctx.font = '10px monospace';
+        ctx.fillText(`${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`, x - 25, chartHeight + 18);
       }
     }
 
-    // candlesticks
-    const candleWidth = Math.max(1.5, zoomLevel * (timeframe === '1m' ? 32 : timeframe === '5m' ? 58 : timeframe === '15m' ? 96 : 160));
+    const candleWidth = Math.max(1.5, zoomLevel * (timeframe === '1m' ? 45 : timeframe === '5m' ? 220 : 600));
     candles.forEach(candle => {
       const x = timeToPixel(candle.time);
       if (x + candleWidth < 0 || x - candleWidth > chartWidth) return;
-
       const yOpen = priceToPixel(candle.open);
       const yClose = priceToPixel(candle.close);
-      const yHigh = priceToPixel(candle.high);
-      const yLow = priceToPixel(candle.low);
-      const isUp = candle.close >= candle.open;
-      const color = isUp ? '#2bbf91' : '#f04d5d';
+      const color = candle.close >= candle.open ? '#26a69a' : '#ef5350';
 
       ctx.strokeStyle = color;
-      ctx.fillStyle = color;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(x, yHigh);
-      ctx.lineTo(x, yLow);
+      ctx.moveTo(x, priceToPixel(candle.high));
+      ctx.lineTo(x, priceToPixel(candle.low));
       ctx.stroke();
-      ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), Math.max(1.5, candleWidth), Math.max(2, Math.abs(yOpen - yClose)));
+      ctx.fillStyle = color;
+      ctx.fillRect(x - candleWidth / 2, Math.min(yOpen, yClose), Math.max(1.2, candleWidth), Math.max(1, Math.abs(yOpen - yClose)));
     });
 
-    // crosshair
     if (crosshair) {
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.6)';
+      ctx.strokeStyle = '#85929E';
+      ctx.lineWidth = 0.8;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
       ctx.moveTo(crosshair.x, 0);
@@ -211,38 +210,32 @@ export default function App() {
       ctx.lineTo(chartWidth, crosshair.y);
       ctx.stroke();
       ctx.setLineDash([]);
-
-      ctx.fillStyle = '#1b2335';
-      ctx.fillRect(chartWidth + 2, crosshair.y - 12, RIGHT_AXIS_WIDTH, 24);
-      ctx.fillStyle = '#e5eefc';
-      ctx.font = '11px monospace';
-      ctx.fillText(crosshair.price.toFixed(activeAsset.decimals), chartWidth + 8, crosshair.y + 4);
+      ctx.fillStyle = '#2a2e39';
+      ctx.fillRect(chartWidth + 1, crosshair.y - 10, RIGHT_AXIS_WIDTH, 20);
+      ctx.fillStyle = '#fff';
+      ctx.font = '10px monospace';
+      ctx.fillText(crosshair.price.toFixed(activeAsset.decimals), chartWidth + 6, crosshair.y + 4);
     }
 
-    // right price labels
-    for (let i = 0; i <= 8; i++) {
-      const price = priceRange.min + i * priceStep;
-      const y = priceToPixel(price);
-      if (y < 0 || y > chartHeight) continue;
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '11px monospace';
-      ctx.fillText(price.toFixed(activeAsset.decimals), chartWidth + 8, y + 4);
-    }
-
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
+    ctx.strokeStyle = '#2a2e39';
     ctx.strokeRect(0, 0, chartWidth, chartHeight);
   }, [activeAsset, candles, crosshair, priceRange, priceToPixel, timeframe, timeToPixel, zoomLevel]);
 
-  useEffect(() => {
+  const handleResize = useCallback(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
-
     const rect = container.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
     drawChart();
   }, [drawChart]);
+
+  useEffect(() => {
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, [handleResize]);
 
   useEffect(() => {
     drawChart();
@@ -251,7 +244,6 @@ export default function App() {
   const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const rect = canvas.getBoundingClientRect();
     const { chartWidth, chartHeight } = getCanvasDimensions();
     const x = Math.max(0, Math.min(chartWidth, event.clientX - rect.left));
@@ -273,185 +265,53 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const latestClose = candles[candles.length - 1]?.close ?? 51682;
-  const previousClose = candles[candles.length - 2]?.close ?? latestClose;
-  const delta = latestClose - previousClose;
-  const percent = (delta / previousClose) * 100;
-
   return (
-    <div className="min-h-screen bg-[#050b14] flex items-center justify-center p-4 text-white">
-      <div className="w-full max-w-[430px] h-[915px] rounded-[32px] overflow-hidden border border-[#1c2a3a] bg-[#0b1524] shadow-[0_20px_80px_rgba(0,0,0,0.6)] relative">
-        <div className="h-8 px-5 pt-4 flex justify-between items-center text-[#dbe7ff] text-[11px] font-medium">
-          <span>6:07 PM</span>
-          <div className="flex items-center gap-2 text-[10px]">
-            <span>3.42</span>
-            <span className="text-[#aabbd2]">K/s</span>
-            <span className="h-2.5 w-2.5 rounded-full bg-[#dfe7f7] opacity-90" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#dfe7f7] opacity-75" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#dfe7f7] opacity-60" />
+    <div className="flex flex-col h-screen w-screen bg-[#131722] text-[#d1d4dc] overflow-hidden select-none font-sans">
+      <header className="flex flex-wrap items-center justify-between px-4 py-2 border-b border-[#2a2e39] bg-[#1c2030] gap-2 shrink-0 z-50">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-[#2962FF] text-white rounded-lg shadow-md flex items-center justify-center">
+            <BarChart2 className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-white tracking-wide">CHART OVERVIEW</h1>
+            <p className="text-[10px] text-[#787b86] font-mono leading-none">Synthetic market data</p>
           </div>
         </div>
-
-        <div className="px-4 pt-2 pb-2 flex items-center gap-3">
-          <div className="flex-1 h-12 rounded-[22px] bg-[#f2f3f5] text-[#101827] flex items-center justify-between px-4 shadow-inner">
-            <div className="flex items-center gap-3">
-              <div className="w-5 h-5 rounded-full border border-[#0f172a] flex items-center justify-center text-[10px] font-bold">◌</div>
-              <span className="text-[27px] font-medium tracking-tight">studio.google.com</span>
-            </div>
-          </div>
-          <button className="w-12 h-12 rounded-full bg-white text-[#111827] flex items-center justify-center shadow-sm">
-            <Plus className="w-7 h-7" />
-          </button>
-          <button className="w-11 h-11 rounded-full bg-[#dfe7f7] text-[#111827] flex items-center justify-center">
-            <MoreHorizontal className="w-6 h-6" />
-          </button>
-        </div>
-
-        <div className="px-4 pb-2">
-          <div className="flex items-center justify-between bg-[#1e2a3a] border border-[#2a3b55] rounded-full px-2 py-1.5 text-xs">
-            <div className="flex items-center gap-1.5 bg-[#0d1522] rounded-full px-2 py-1.5 text-[#dfeafd]">
-              <span className="inline-block w-2 h-2 rounded-full bg-[#36d399]" />
-              <span className="font-medium">US30</span>
-            </div>
-            <div className="flex items-center gap-1 text-[#9eb3d9]">
-              {['1m', '5m', '15m', '1H', '4H'].map(tf => (
-                <button
-                  key={tf}
-                  onClick={() => setTimeframe(tf)}
-                  className={`px-2 py-1 rounded-md ${timeframe === tf ? 'bg-[#2f5fff] text-white' : 'text-[#b4c8f5]'}`}
-                >
-                  {tf}
-                </button>
-              ))}
-            </div>
-            <button className="flex items-center gap-1 bg-[#1d2434] px-2 py-1 rounded-md text-[#e4efff]">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#fbbf24]" />
-              Theme
-            </button>
-            <button className="flex items-center gap-1 bg-[#1d2434] px-2 py-1 rounded-md text-[#e4efff]">
-              <CircleDashed className="w-3.5 h-3.5" />
-              Indicators
-            </button>
-            <button className="flex items-center gap-1 bg-[#1d2434] px-2 py-1 rounded-md text-[#e4efff]">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#f87171]" />
-              MARKET CLOSED
-            </button>
+        <div className="flex items-center flex-wrap gap-2">
+          <label className="flex items-center bg-[#24293e] rounded-md border border-[#363c4e] px-2 py-1">
+            <span className="text-[10px] font-mono text-[#829ab1] mr-1.5 uppercase font-bold">Symbol:</span>
+            <select value={selectedSymbol} onChange={event => setSelectedSymbol(event.target.value)} className="bg-transparent border-none text-xs font-bold text-white focus:outline-none cursor-pointer pr-1">
+              {ASSETS.map(asset => <option key={asset.symbol} value={asset.symbol} className="bg-[#1c2030] text-white">{asset.symbol} ({asset.name})</option>)}
+            </select>
+          </label>
+          <div className="flex items-center bg-[#24293e] rounded-md border border-[#363c4e] p-0.5">
+            {['1m', '5m', '15m', '1H', '4H'].map(tf => <button key={tf} onClick={() => setTimeframe(tf)} className={`px-3 py-1 text-xs font-semibold rounded ${timeframe === tf ? 'bg-[#2962FF] text-white' : 'text-[#85929E] hover:text-white hover:bg-[#2c324b]'}`}>{tf}</button>)}
           </div>
         </div>
+      </header>
 
-        <div className="mx-3 mt-2 flex h-[720px] rounded-[24px] overflow-hidden border border-[#1a293a] bg-[#0e1d2f]">
-          <aside className="w-[318px] border-r border-[#24354d] bg-[#101d2d] p-4">
-            <div className="flex items-center justify-between text-[#dfeaf6] mb-3">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#0d253d] text-[#5fa9ff] font-bold">30</span>
-                <div>
-                  <div className="text-[11px] text-[#9ab2d2]">US30 • DJI</div>
-                  <div className="text-[9px] text-[#6b7f9d]">Dow Jones (Spot *DJI)</div>
-                </div>
-              </div>
-              <button className="text-[#9ab2d2] text-xl">×</button>
-            </div>
-
-            <div className="mb-4">
-              <div className="text-[22px] font-bold text-[#f8f8ff]">{latestClose.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm text-[#f2f4fb]">USD</span></div>
-              <div className="mt-1 flex items-center gap-2 text-[13px] font-medium text-[#ef5353]">
-                <span className="text-lg">↘</span>
-                <span>{delta.toFixed(2)} ({percent.toFixed(2)}%)</span>
-                <span className="text-[#9aaec8]">AT CLOSE / LIVE</span>
-              </div>
-            </div>
-
-            <div className="flex gap-2 text-[10px] font-medium border-b border-[#24334c] pb-2 mb-3">
-              {['Overview', 'Key Stats', 'Seasons'].map((tab, idx) => (
-                <button key={tab} className={`px-2 py-1.5 rounded ${idx === 0 ? 'bg-[#1d2f46] text-white border border-[#304d75]' : 'text-[#89a0c6]'}`}>
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            <div className="bg-[#162232] border border-[#24364d] rounded-xl p-3 mb-3">
-              <div className="text-[10px] font-medium text-[#7d90ae] uppercase tracking-wider mb-2">Description</div>
-              <p className="text-[11px] leading-5 text-[#dfe7f8]">
-                This asset represents the high-frequency trading stream for Dow Jones (Spot *DJI), sourced via live prices from Yahoo Finance. Our smart terminal computes order blocks, gaps, and sessions instantly.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <div className="bg-[#162232] border border-[#24364d] rounded-xl p-2">
-                <div className="text-[10px] text-[#7d90ae] uppercase">Day high</div>
-                <div className="mt-1 text-[14px] font-bold text-[#50d4a6]">51723.62</div>
-              </div>
-              <div className="bg-[#162232] border border-[#24364d] rounded-xl p-2">
-                <div className="text-[10px] text-[#7d90ae] uppercase">Day low</div>
-                <div className="mt-1 text-[14px] font-bold text-[#f08d96]">51660.83</div>
-              </div>
-            </div>
-
-            <div className="bg-[#162232] border border-[#24364d] rounded-xl p-3">
-              <div className="text-[10px] font-medium text-[#7d90ae] uppercase tracking-wider mb-2">Quick swapper</div>
-              <div className="space-y-2 text-[12px] font-medium">
-                {['US30', 'NQ-F', 'GC=F'].map((symbol, index) => (
-                  <button
-                    key={symbol}
-                    onClick={() => setSelectedSymbol(symbol)}
-                    className={`w-full text-left px-3 py-2 rounded-lg border ${selectedSymbol === symbol ? 'border-[#3c73ff] bg-[#1c2d48] text-white' : 'border-transparent bg-[#111d2d] text-[#d1dff8]'}`}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <span className={`inline-block w-2.5 h-2.5 rounded-full ${index === 0 ? 'bg-[#3b82f6]' : index === 1 ? 'bg-[#f59e0b]' : 'bg-[#f87171]'}`} />
-                      {symbol}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </aside>
-
-          <main className="flex-1 relative bg-[#0d1829]">
-            <div className="px-4 py-3 flex items-center justify-between border-b border-[#213247] text-[12px] text-[#dfeaf6]">
-              <div className="flex items-center gap-2">
-                <span className="text-[#a6b7d9]">US30 • DJI</span>
-                <span className="text-[#eaf5ff] font-semibold">BT Morgan</span>
-              </div>
-              <div className="flex items-center gap-2 text-[#d2dffb]">
-                <span className="bg-[#1e2c40] px-1.5 py-0.5 rounded text-[10px]">● Trading Sessions</span>
-                <span className="bg-[#1e2c40] px-1.5 py-0.5 rounded text-[10px]">● Volume</span>
-              </div>
-            </div>
-
-            <div className="relative h-[600px]">
-              <div className="absolute inset-0">
-                <canvas ref={canvasRef} onMouseMove={handleMouseMove} onWheel={handleWheel} className="w-full h-full block" />
-              </div>
-            </div>
-
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-16 flex items-center justify-center gap-3 text-[#a6b7d9] text-[10px]">
-              <span>16:00</span>
-              <span>18</span>
-              <span>18:00</span>
-            </div>
-
-            <div className="absolute right-5 bottom-10 bg-[#1a2a3f] border border-[#2d4265] rounded-xl px-3 py-2 flex items-center gap-2 text-sm text-[#dfeaf6] shadow-lg">
-              <span className="inline-block w-2 h-2 rounded-full bg-[#60a5fa]" />
-              <span className="font-semibold">BT Morgan AI</span>
-            </div>
-          </main>
+      <main ref={containerRef} className="flex-1 h-full bg-[#131722] relative overflow-hidden">
+        <canvas ref={canvasRef} onMouseMove={handleMouseMove} onWheel={handleWheel} className="absolute inset-0 cursor-crosshair block" />
+        <div className="absolute bottom-4 left-4 bg-[#1c2030]/90 border border-[#2a2e39] rounded-lg p-2.5 shadow-xl max-w-xs font-mono text-[10px] text-[#829ab1] flex flex-col gap-1 pointer-events-none">
+          <div className="text-white font-bold mb-1">CONTROLS</div>
+          <div>&bull; Mouse Scroll Wheel: Zoom</div>
+          <div>&bull; Arrow Keys: Pan Timeline</div>
+          <div>&bull; Crosshair Tracking: <span className="text-[#2962FF] font-bold">ON</span></div>
         </div>
-
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-[#0d1727] border-t border-[#1d2b3d] flex items-center justify-around px-4 text-[#a5b4cd]">
-          <button className="flex flex-col items-center gap-1 text-white">
-            <span className="text-xl font-bold">☰</span>
-            <span className="text-[10px]">Chat</span>
-          </button>
-          <button className="flex flex-col items-center gap-1">
-            <span className="text-xl">◉</span>
-            <span className="text-[10px]">Preview</span>
-          </button>
-          <button className="flex flex-col items-center gap-1">
-            <span className="text-xl">⇄</span>
-            <span className="text-[10px]">Send</span>
-          </button>
+        <div className="absolute top-4 right-4 bg-[#ff9800]/10 border border-[#ff9800]/30 rounded-lg px-3 py-1.5 text-[10px] text-[#ff9800] flex items-center gap-2 pointer-events-none z-30 font-mono">
+          <Clock className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '6s' }} />
+          <span>Market Feed Active</span>
         </div>
-      </div>
+      </main>
+
+      <footer className="h-8 bg-[#161a29] border-t border-[#2a2e39] shrink-0 flex items-center justify-between px-4 text-[10px] font-mono text-[#829ab1] z-50">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1 text-[#26a69a]"><span className="w-1.5 h-1.5 rounded-full bg-[#26a69a] animate-ping" />MARKET ONLINE</span>
+          <span className="text-white">Active Symbol: <strong className="text-[#ff9800]">{selectedSymbol}</strong></span>
+          <span>Timeframe: <strong className="text-[#2196f3]">{timeframe}</strong></span>
+        </div>
+        <span className="flex items-center gap-1 text-[#26a69a]"><Activity className="w-3.5 h-3.5" />Live chart stream</span>
+      </footer>
     </div>
   );
 }
