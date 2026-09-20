@@ -135,23 +135,11 @@ export const SymbolSearchModal: React.FC<SymbolSearchModalProps> = ({
                   </div>
 
                   <div className="flex items-center gap-4 text-right shrink-0">
-                    {(() => {
-                      const stat = symbolStats[item.symbol];
-                      const changePercent = stat ? stat.changePercent : ((Math.random() - 0.48) * 0.5); // small realistic offset if not loaded
-                      const isPositive = changePercent >= 0;
-                      return (
-                        <div className="font-mono flex flex-col justify-end items-end">
-                          <span className="text-xs font-extrabold text-white">
-                            {stat ? stat.price.toFixed(item.precision) : item.basePrice.toFixed(item.precision)}
-                          </span>
-                          <span className={`text-[10px] font-bold mt-0.5 px-1.5 py-0.5 rounded-sm ${
-                            isPositive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                          }`}>
-                            {isPositive ? '+' : ''}{changePercent.toFixed(2)}%
-                          </span>
-                        </div>
-                      );
-                    })()}
+                    <div className="font-mono flex flex-col justify-end items-end">
+                      <span className="text-xs font-extrabold text-white">
+                        {item.basePrice.toFixed(item.precision)}
+                      </span>
+                    </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#131722] text-[#787b86] border border-[#2a2e39] uppercase font-mono font-medium">
                         {item.exchange}

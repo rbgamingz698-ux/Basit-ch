@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { X, ExternalLink, Newspaper, Clock, Zap } from 'lucide-react';
+import { analyzeArticleImpact } from '../utils/symbolNewsImpact';
 
 interface NewsNotificationProps {
   item: {
@@ -57,6 +58,7 @@ export const NewsNotification: React.FC<NewsNotificationProps> = ({
   if (!item) return null;
 
   const isHighImpact = item.impact === 'HIGH' || item.impact === 'Red';
+  const impact = analyzeArticleImpact(item.title, item.publisher || '');
 
   return (
     <div
@@ -74,11 +76,24 @@ export const NewsNotification: React.FC<NewsNotificationProps> = ({
       <div className="p-4">
         {/* Header with Timing Badge & Close */}
         <div className="flex items-center justify-between gap-2 mb-2.5">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#2962FF]/20 text-[#2962FF] text-[10px] font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#2962FF]/20 text-[#2962FF] text-[10px] font-bold uppercase tracking-wider">
               <Zap className="w-3 h-3 text-[#2962FF]" />
-              BREAKING NEWS
+              BREAKING
             </span>
+
+            {/* Impact Emoji Sentiment Badge */}
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border ${
+                impact.primarySentiment === 'bull'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              }`}
+            >
+              <span>{impact.primaryEmoji}</span>
+              <span>{impact.summaryBadge}</span>
+            </span>
+
             {isHighImpact && (
               <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 text-[9px] font-bold uppercase">
                 HIGH IMPACT
@@ -101,6 +116,24 @@ export const NewsNotification: React.FC<NewsNotificationProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Affected Symbols Chips */}
+        {impact.impactedSymbols.length > 0 && (
+          <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+            {impact.impactedSymbols.map((sym) => (
+              <span
+                key={sym.symbol}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                  sym.sentiment === 'bull'
+                    ? 'bg-emerald-950/60 text-emerald-400 border-emerald-700/40'
+                    : 'bg-amber-950/60 text-amber-400 border-amber-700/40'
+                }`}
+              >
+                {sym.symbol} {sym.emoji} {sym.sentiment === 'bull' ? 'Bull' : 'Bear'}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Headline */}
         <a

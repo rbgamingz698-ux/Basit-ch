@@ -12,7 +12,7 @@ import {
   HistogramSeries,
   Time,
 } from 'lightweight-charts';
-import { Eye, EyeOff, Sliders, X, Tag, BarChart2 } from 'lucide-react';
+import { Eye, EyeOff, Sliders, X, Tag, BarChart2, Target } from 'lucide-react';
 import {
   CandleColorTheme,
   CandleData,
@@ -373,6 +373,40 @@ export const TradingViewChart: React.FC<RealtimeCandleChartProps> = ({
     });
   }, [chartType]);
 
+  // Jump to live helper function (teleports to live candle and views the whole day chart)
+  const handleJumpToLive = () => {
+    if (chartRef.current && candles && candles.length > 0) {
+      chartRef.current.timeScale().scrollToRealTime();
+      const totalBars = candles.length;
+      const lastCandle = candles[totalBars - 1];
+      
+      let startIndex = 0;
+      if (lastCandle && lastCandle.time) {
+        const lastDate = new Date(Number(lastCandle.time) * 1000).toDateString();
+        for (let i = totalBars - 1; i >= 0; i--) {
+          const d = new Date(Number(candles[i].time) * 1000).toDateString();
+          if (d !== lastDate) {
+            startIndex = i + 1;
+            break;
+          }
+        }
+      }
+
+      const fromIndex = Math.max(0, startIndex);
+      const toIndex = totalBars + 4;
+      chartRef.current.timeScale().setVisibleLogicalRange({ from: fromIndex, to: toIndex });
+    }
+  };
+
+  // Listen to global jump-to-live event from collapsed sidebar
+  useEffect(() => {
+    const listener = () => handleJumpToLive();
+    window.addEventListener('jump-to-live', listener);
+    return () => {
+      window.removeEventListener('jump-to-live', listener);
+    };
+  }, [candles]);
+
   // Feed Data to Core Series
   useEffect(() => {
     if (!candles || candles.length === 0) return;
@@ -599,6 +633,8 @@ export const TradingViewChart: React.FC<RealtimeCandleChartProps> = ({
         </span>
       </div>
 
+
+
       {/* On-Chart Active Indicators Legend */}
       {activeIndicators.length > 0 && (
         <div className="absolute top-16 left-3 z-20 flex flex-col gap-1 pointer-events-auto bg-[#131722]/90 backdrop-blur-xs p-2 rounded-lg border border-[#2a2e39] shadow-xl max-w-xs transition-all">
@@ -727,6 +763,16 @@ export const TradingViewChart: React.FC<RealtimeCandleChartProps> = ({
               );
             })}
           </div>
+
+          {/* Jump to Live Price Button */}
+          <button
+            onClick={handleJumpToLive}
+            className="mt-2 w-full flex items-center justify-center gap-1.5 bg-[#1e222d] hover:bg-[#2962FF] text-[#d1d4dc] hover:text-white px-3 py-1.5 rounded-md border border-[#2a2e39] hover:border-[#2962FF] text-xs font-mono font-bold shadow-md transition-all cursor-pointer group pointer-events-auto"
+            title="Jump screen to live price of selected symbol"
+          >
+            <Target className="w-3.5 h-3.5 text-[#2962FF] group-hover:text-white animate-pulse" />
+            <span>Jump to Live Price</span>
+          </button>
         </div>
       )}
 

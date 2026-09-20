@@ -3,10 +3,10 @@ import { CandleColorTheme } from '../types/chart';
 export const DEFAULT_CANDLE_THEMES: CandleColorTheme[] = [
   {
     id: 'classic',
-    name: 'Classic Pro',
-    upColor: '#089981',
+    name: 'TradingView Classic',
+    upColor: '#22ab94',
     downColor: '#f23645',
-    wickUpColor: '#089981',
+    wickUpColor: '#22ab94',
     wickDownColor: '#f23645',
   },
   {

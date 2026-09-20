@@ -6,14 +6,16 @@ import {
   Palette,
   Sliders,
   Search,
-  LayoutGrid,
   Newspaper,
   Calendar,
   Layers,
+  LogOut,
 } from 'lucide-react';
 import { CandleColorTheme, ChartType, Timeframe } from '../types/chart';
 import { getSymbolInfo, isMarketOpen } from '../services/marketData';
 import { Language, getTranslation } from '../utils/thaiTranslation';
+import { PingIndicator } from './PingIndicator';
+import { useAuth } from './AuthProvider';
 
 interface TopBarProps {
   symbol: string;
@@ -74,6 +76,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   const marketOpen = isMarketOpen();
   const t = getTranslation(language || 'EN');
   const [isChartTypeMenuOpen, setIsChartTypeMenuOpen] = useState(false);
+  const { signOutUser } = useAuth();
 
   const chartTypes: ChartType[] = ['Candlestick', 'Bar', 'Line', 'Heikin-Ashi', 'Area', 'Baseline'];
 
@@ -140,45 +143,6 @@ export const TopBar: React.FC<TopBarProps> = ({
 
           <div className="h-4 w-px bg-[#2a2e39]" />
 
-          {/* Chart Type Selector */}
-          <div className="relative">
-            <button
-              onClick={() => setIsChartTypeMenuOpen(!isChartTypeMenuOpen)}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#1e222d] hover:bg-[#2a2e39] text-[#d1d4dc] hover:text-white transition-colors border border-[#2a2e39] cursor-pointer shadow-xs text-[10px] whitespace-nowrap"
-              title="Change Chart Type"
-            >
-              <LayoutGrid className="w-3 h-3 text-emerald-400" />
-              <span className="font-medium hidden sm:inline">{chartType}</span>
-              <ChevronDown className="w-3 h-3" />
-            </button>
-            {isChartTypeMenuOpen && (
-              <div className="absolute top-full right-0 mt-1 bg-[#131722] border border-[#2a2e39] rounded-lg shadow-xl z-50 p-1 min-w-[120px]">
-                {chartTypes.map(type => (
-                  <button
-                    key={type}
-                    onClick={() => { onChangeChartType(type); setIsChartTypeMenuOpen(false); }}
-                    className={`block w-full text-left px-2 py-1.5 rounded text-[11px] ${chartType === type ? 'bg-[#2962FF] text-white' : 'hover:bg-[#2a2e39] text-[#d1d4dc]'}`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="h-4 w-px bg-[#2a2e39]" />
-
-          {/* Candle Colors Theme Modal Trigger */}
-          <button
-            id="candle-color-btn"
-            onClick={onOpenCandleColorModal}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#1e222d] hover:bg-[#2a2e39] text-[#d1d4dc] hover:text-white transition-colors border border-[#2a2e39] cursor-pointer shadow-xs text-[10px] whitespace-nowrap"
-            title="Customize Candle Colors"
-          >
-            <Palette className="w-3 h-3 text-amber-400" />
-            <span className="font-medium hidden sm:inline">{t.theme}</span>
-          </button>
-
           {/* Indicators Library Modal Trigger */}
           <button
             id="indicators-btn"
@@ -189,10 +153,16 @@ export const TopBar: React.FC<TopBarProps> = ({
             <Sliders className="w-3 h-3 text-[#2962FF]" />
             <span>{t.indicators}</span>
           </button>
+
+          {/* All Drawing Tools & Features Bento Drawer Trigger */}
+          {/* Drawing tools removed as requested. */}
         </div>
 
         {/* 3. MARKET STATUS, YAHOO FINANCE DATA FEED STATUS & REFRESH */}
         <div className="flex items-center gap-2">
+          {/* Ping Indicator */}
+          <PingIndicator />
+
           {/* Market Open/Close Badge */}
           <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-mono font-bold ${
             marketOpen ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
@@ -265,6 +235,16 @@ export const TopBar: React.FC<TopBarProps> = ({
             title="Refresh Yahoo Finance Candles"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoadingData ? 'animate-spin text-[#2962FF]' : ''}`} />
+          </button>
+
+          {/* Sign Out */}
+          <button
+            onClick={signOutUser}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-rose-900/20 hover:bg-rose-900/40 text-rose-400 hover:text-rose-300 border-rose-900/50 transition-all cursor-pointer text-[10px] font-bold shadow-xs whitespace-nowrap"
+            title="Sign Out"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
           </button>
         </div>
 

@@ -10,6 +10,7 @@ export interface Translations {
   live: string;
   watchlist: string;
   economicNews: string;
+  jumpToLive: string;
 }
 
 const enTranslations: Translations = {
@@ -22,6 +23,7 @@ const enTranslations: Translations = {
   live: 'Live',
   watchlist: 'Watchlist',
   economicNews: 'Economic News',
+  jumpToLive: 'Jump to Live',
 };
 
 const thTranslations: Translations = {
@@ -34,6 +36,7 @@ const thTranslations: Translations = {
   live: 'สด',
   watchlist: 'รายการเฝ้าดู',
   economicNews: 'ข่าวเศรษฐกิจ',
+  jumpToLive: 'ไปยังราคาปัจจุบัน',
 };
 
 export function getTranslation(lang: Language = 'EN'): Translations {

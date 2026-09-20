@@ -1,16 +1,18 @@
+import { useAuth } from './components/AuthProvider';
+import { LoginPage } from './components/LoginPage';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TopBar } from './components/TopBar';
 import { TradingViewChart } from './components/TradingViewChart';
 import { BottomBar } from './components/BottomBar';
 import { StockDetailPanel, LeftPanelTab } from './components/StockDetailPanel';
 import { SymbolSearchModal } from './components/SymbolSearchModal';
+import { TenChartGridModal } from './components/TenChartGridModal';
 import { CandleColorModal } from './components/CandleColorModal';
 import { ChartSettingsModal } from './components/ChartSettingsModal';
 import { IndicatorLibraryModal } from './components/indicators/IndicatorLibraryModal';
 import { IndicatorSettingsModal } from './components/indicators/IndicatorSettingsModal';
 import { PineScriptEditorModal } from './components/indicators/PineScriptEditorModal';
 import { NewsNotification } from './components/NewsNotification';
-import { GeminiAssistant } from './components/GeminiAssistant';
 import { 
   CandleColorTheme, 
   CandleData, 
@@ -31,6 +33,7 @@ import {
 import { DEFAULT_THEME } from './utils/candleColors';
 import { PineScriptResult } from './services/pineScriptInterpreter';
 import { Language } from './utils/thaiTranslation';
+
 
 const INITIAL_INDICATORS: IndicatorInstance[] = [
   {
@@ -97,6 +100,7 @@ const INITIAL_INDICATORS: IndicatorInstance[] = [
 ];
 
 export function App() {
+  const { user, loading } = useAuth();
   // Core Chart State
   const [symbol, setSymbol] = useState<string>('US30');
   const [timeframe, setTimeframe] = useState<Timeframe>('5m');
@@ -172,6 +176,38 @@ export function App() {
     pktDateTime?: string;
     impact?: string;
   } | null>(null);
+
+  // Price crossing alert handler
+  const handleTriggerAlert = useCallback((alert: any) => {
+    setNotificationItem({
+      title: `PRICE ALERT: ${alert.symbol}`,
+      publisher: 'Drawing Engine',
+      pktDateTime: `Price reached ${alert.targetPrice.toFixed(2)} - ${alert.message || 'Target hit'}`,
+      impact: 'High',
+    });
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      }
+    } catch {}
+  }, []);
+
+  const handleSetAlert = useCallback(
+    (drawing: any) => {
+      // Alert functionality removed
+    },
+    [symbol, lastPrice]
+  );
 
   const symbolInfo: SymbolInfo = getSymbolInfo(symbol);
 
@@ -328,6 +364,9 @@ export function App() {
     });
   };
 
+  if (loading) return <div className="h-screen flex items-center justify-center bg-[#131722] text-white">Loading...</div>;
+  if (!user) return <LoginPage />;
+
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#131722] text-[#d1d4dc] font-sans antialiased select-none">
       {/* Top Application Bar */}
@@ -375,7 +414,9 @@ export function App() {
           onTabChange={(tab) => setLeftPanelTab(tab)}
         />
 
-        {/* Center & Right: Full-Screen Interactive TradingView Chart (with unobstructed right price scale) */}
+
+
+        {/* Center & Right: Full-Screen Interactive TradingView Chart */}
         <div className="flex-1 h-full relative overflow-hidden bg-[#131722]">
           <TradingViewChart
             symbolInfo={symbolInfo}
@@ -470,12 +511,6 @@ export function App() {
           durationSeconds={12}
         />
       )}
-
-      {/* Gemini AI Assistant Chatbot */}
-      <GeminiAssistant
-        currentSymbol={symbol}
-        currentTimeframe={timeframe}
-      />
     </div>
   );
 }

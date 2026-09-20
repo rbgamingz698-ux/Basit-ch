@@ -1,0 +1,20 @@
+{
+  "entities": {
+    "userSettings": {
+      "title": "User Settings",
+      "description": "User specific application settings",
+      "type": "object",
+      "properties": {
+        "theme": { "type": "string", "description": "UI theme preference" },
+        "dashboardLayout": { "type": "string", "description": "Layout configuration" }
+      },
+      "required": ["theme"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/settings/userSettings": {
+      "schema": { "$ref": "#/entities/userSettings" },
+      "description": "User settings document"
+    }
+  }
+}

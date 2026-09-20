@@ -7,12 +7,14 @@ import {
   Newspaper,
   Calendar,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Target
 } from 'lucide-react';
 import { CandleData } from '../types/chart';
 import { getSymbolInfo, SUPPORTED_SYMBOLS } from '../services/marketData';
 import { StocksNewsPanel } from './StocksNewsPanel';
 import { EconomicCalendarPanel } from './EconomicCalendarPanel';
+import { PriceAlertsPanel } from './PriceAlertsPanel';
 
 export type LeftPanelTab = 'overview' | 'news' | 'calendar';
 
@@ -106,53 +108,68 @@ export const StockDetailPanel: React.FC<StockDetailPanelProps> = ({
     return (
       <aside 
         id="stock-detail-panel-collapsed"
-        className="w-12 bg-[#131722] border-r border-[#2a2e39] flex flex-col items-center py-3 select-none shrink-0 z-20"
+        className="w-12 bg-[#131722] border-r border-[#2a2e39] flex flex-col items-center py-3 select-none shrink-0 z-20 justify-between"
       >
-        <button
-          onClick={onToggleCollapse}
-          className="w-8 h-8 rounded-lg bg-[#1e222d] hover:bg-[#2a2e39] text-[#787b86] hover:text-white transition-all flex items-center justify-center border border-[#2a2e39] cursor-pointer"
-          title="Expand Left Panel"
-        >
-          <ChevronRight className="w-4 h-4 text-white" />
-        </button>
-
-        <div className="mt-5 flex flex-col items-center gap-3">
-          {/* Overview button with circular badge */}
+        <div className="flex flex-col items-center">
           <button
-            onClick={() => { onToggleCollapse(); setActiveTab('overview'); }}
-            className={`w-8 h-8 rounded-full ${circularBadge.bg} ${circularBadge.textCol} flex items-center justify-center text-xs font-black shadow-md transition-transform hover:scale-110 cursor-pointer ${
-              activeTab === 'overview' ? 'ring-2 ring-white/60' : 'opacity-80 hover:opacity-100'
-            }`}
-            title={`${symbolInfo.symbol} Overview & Stats`}
+            onClick={onToggleCollapse}
+            className="w-8 h-8 rounded-lg bg-[#1e222d] hover:bg-[#2a2e39] text-[#787b86] hover:text-white transition-all flex items-center justify-center border border-[#2a2e39] cursor-pointer"
+            title="Expand Left Panel"
           >
-            {circularBadge.text}
+            <ChevronRight className="w-4 h-4 text-white" />
           </button>
 
-          {/* Stocks News icon */}
-          <button
-            onClick={() => { onToggleCollapse(); setActiveTab('news'); }}
-            className={`p-2 rounded-lg transition-colors relative cursor-pointer ${
-              activeTab === 'news'
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                : 'text-[#787b86] hover:text-amber-400 hover:bg-[#1e222d]'
-            }`}
-            title="Stocks & Market News Feed"
-          >
-            <Newspaper className="w-4 h-4" />
-            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400" />
-          </button>
+          <div className="mt-5 flex flex-col items-center gap-3">
+            {/* Overview button with circular badge */}
+            <button
+              onClick={() => { onToggleCollapse(); setActiveTab('overview'); }}
+              className={`w-8 h-8 rounded-full ${circularBadge.bg} ${circularBadge.textCol} flex items-center justify-center text-xs font-black shadow-md transition-transform hover:scale-110 cursor-pointer ${
+                activeTab === 'overview' ? 'ring-2 ring-white/60' : 'opacity-80 hover:opacity-100'
+              }`}
+              title={`${symbolInfo.symbol} Overview & Stats`}
+            >
+              {circularBadge.text}
+            </button>
 
-          {/* Economic Calendar icon */}
+            {/* Stocks News icon */}
+            <button
+              onClick={() => { onToggleCollapse(); setActiveTab('news'); }}
+              className={`p-2 rounded-lg transition-colors relative cursor-pointer ${
+                activeTab === 'news'
+                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                  : 'text-[#787b86] hover:text-amber-400 hover:bg-[#1e222d]'
+              }`}
+              title="Stocks & Market News Feed"
+            >
+              <Newspaper className="w-4 h-4" />
+              <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400" />
+            </button>
+
+            {/* Economic Calendar icon */}
+            <button
+              onClick={() => { onToggleCollapse(); setActiveTab('calendar'); }}
+              className={`p-2 rounded-lg transition-colors relative cursor-pointer ${
+                activeTab === 'calendar'
+                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  : 'text-[#787b86] hover:text-rose-400 hover:bg-[#1e222d]'
+              }`}
+              title="Upcoming Economic Calendar"
+            >
+              <Calendar className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Jump to Live Price Button at bottom of collapsed sidebar */}
+        <div className="pb-1">
           <button
-            onClick={() => { onToggleCollapse(); setActiveTab('calendar'); }}
-            className={`p-2 rounded-lg transition-colors relative cursor-pointer ${
-              activeTab === 'calendar'
-                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                : 'text-[#787b86] hover:text-rose-400 hover:bg-[#1e222d]'
-            }`}
-            title="Upcoming Economic Calendar"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('jump-to-live'));
+            }}
+            className="w-9 h-9 rounded-lg bg-[#1e222d] hover:bg-[#2962FF] text-[#2962FF] hover:text-white transition-all flex items-center justify-center border border-[#2a2e39] hover:border-[#2962FF] cursor-pointer shadow-md group"
+            title="Jump to Live Price"
           >
-            <Calendar className="w-4 h-4" />
+            <Target className="w-4 h-4 group-hover:animate-pulse" />
           </button>
         </div>
       </aside>
@@ -299,29 +316,6 @@ export const StockDetailPanel: React.FC<StockDetailPanelProps> = ({
               </div>
             </div>
 
-            {/* Quick Swapper */}
-            <div className="space-y-2 border-t border-[#2a2e39] pt-4">
-              <div className="text-[11px] font-bold text-white uppercase tracking-wider px-1">Quick Instrument Switch</div>
-              <div className="space-y-1.5">
-                {SUPPORTED_SYMBOLS.slice(0, 4).map(s => (
-                  <button
-                    key={s.symbol}
-                    onClick={() => onSelectSymbol(s.symbol)}
-                    className={`w-full p-2.5 rounded-xl border text-left transition-all flex items-center justify-between text-xs cursor-pointer ${
-                      s.symbol === symbol
-                        ? 'bg-[#2962FF]/15 border-[#2962FF] text-white'
-                        : 'bg-[#1e222d] border-[#2a2e39] text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#2a2e39]'
-                    }`}
-                  >
-                    <div>
-                      <span className="font-bold text-[11px] text-white block">{s.symbol}</span>
-                      <span className="text-[10px] text-[#787b86]">{s.displayName}</span>
-                    </div>
-                    <span className="font-mono text-[10px] text-[#787b86] uppercase">{s.exchange}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         )}
 

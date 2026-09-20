@@ -48,36 +48,19 @@ export function isMarketOpen(): boolean {
 }
 
 export const SUPPORTED_SYMBOLS: SymbolInfo[] = [
-  {
-    symbol: 'US30',
-    displayName: 'Dow Jones (Spot ^DJI)',
-    ticker: '^DJI',
-    exchange: 'DJI',
-    precision: 2,
-    pipSize: 1.0,
-    basePrice: 51778.04,
-    type: 'index',
-  },
-  {
-    symbol: 'NQ=F',
-    displayName: 'NASDAQ Futures (NQ=F 24h)',
-    ticker: 'NQ=F',
-    exchange: 'CME',
-    precision: 2,
-    pipSize: 0.25,
-    basePrice: 29880.00,
-    type: 'index',
-  },
-  {
-    symbol: 'BT_GC=F',
-    displayName: 'Gold Futures (GC=F)',
-    ticker: 'GC=F',
-    exchange: 'COMEX',
-    precision: 2,
-    pipSize: 0.1,
-    basePrice: 2580.00,
-    type: 'commodity',
-  },
+  { symbol: 'IXIC', displayName: 'Nasdaq Composite (INDEXNASDAQ:IXIC)', ticker: '^IXIC', exchange: 'INDEXNASDAQ', precision: 2, pipSize: 0.25, basePrice: 19000.00, type: 'index' },
+  { symbol: 'NDX', displayName: 'Nasdaq 100 (INDEXNASDAQ:NDX)', ticker: '^NDX', exchange: 'INDEXNASDAQ', precision: 2, pipSize: 0.25, basePrice: 20000.00, type: 'index' },
+  { symbol: '.INX', displayName: 'S&P 500 (INDEXSP:.INX)', ticker: '^GSPC', exchange: 'INDEXSP', precision: 2, pipSize: 0.25, basePrice: 5800.00, type: 'index' },
+  { symbol: '.DJI', displayName: 'Dow Jones (INDEXDJX:.DJI)', ticker: '^DJI', exchange: 'INDEXDJX', precision: 2, pipSize: 1.0, basePrice: 44000.00, type: 'index' },
+  { symbol: 'VIX', displayName: 'VIX (INDEXCBOE:VIX)', ticker: '^VIX', exchange: 'INDEXCBOE', precision: 2, pipSize: 0.01, basePrice: 15.00, type: 'index' },
+  { symbol: 'TNX', displayName: '10-Year Treasury Yield (TVC:TNX)', ticker: '^TNX', exchange: 'TVC', precision: 2, pipSize: 0.01, basePrice: 4.00, type: 'index' },
+  { symbol: 'DXY', displayName: 'US Dollar Index (TVC:DXY)', ticker: 'DX-Y.NYB', exchange: 'TVC', precision: 3, pipSize: 0.01, basePrice: 104.00, type: 'index' },
+  { symbol: 'QQQ', displayName: 'Nasdaq 100 ETF (NASDAQ:QQQ)', ticker: 'QQQ', exchange: 'NASDAQ', precision: 2, pipSize: 0.01, basePrice: 500.00, type: 'stock' },
+  { symbol: 'SOX', displayName: 'Semiconductor Index (INDEXNASDAQ:SOX)', ticker: '^SOX', exchange: 'INDEXNASDAQ', precision: 2, pipSize: 0.25, basePrice: 5000.00, type: 'index' },
+  { symbol: 'RUT', displayName: 'Russell 2000 (INDEXRUSSELL:RUT)', ticker: '^RUT', exchange: 'INDEXRUSSELL', precision: 2, pipSize: 0.1, basePrice: 2200.00, type: 'index' },
+  // Commodities
+  { symbol: 'GC=F', displayName: 'Gold Futures (COMEX:GC=F)', ticker: 'GC=F', exchange: 'COMEX', precision: 2, pipSize: 0.1, basePrice: 2700.00, type: 'commodity' },
+  { symbol: 'CL=F', displayName: 'Crude Oil Futures (NYMEX:CL=F)', ticker: 'CL=F', exchange: 'NYMEX', precision: 2, pipSize: 0.01, basePrice: 70.00, type: 'commodity' },
 ];
 
 export function getSymbolInfo(symbolName: string): SymbolInfo {
@@ -88,14 +71,10 @@ export function getSymbolInfo(symbolName: string): SymbolInfo {
   if (exact) return exact;
 
   if (norm.includes('GC') || norm.includes('GOLD')) {
-    return SUPPORTED_SYMBOLS.find((s) => s.symbol === 'BT_GC=F') || SUPPORTED_SYMBOLS[0];
+    return SUPPORTED_SYMBOLS.find((s) => s.symbol === 'GC') || SUPPORTED_SYMBOLS[1];
   }
-  if (norm.includes('NQ')) return SUPPORTED_SYMBOLS[1];
-  if (norm.includes('YM') || norm.includes('US30=F') || norm.includes('FUT')) {
-    return SUPPORTED_SYMBOLS[0];
-  }
-  if (norm.includes('NAS') || norm.includes('100') || norm.includes('IXIC')) {
-    return SUPPORTED_SYMBOLS[1];
+  if (norm.includes('YM') || norm.includes('DJI') || norm.includes('DOW')) {
+    return SUPPORTED_SYMBOLS.find((s) => s.symbol === 'YM') || SUPPORTED_SYMBOLS[0];
   }
   return SUPPORTED_SYMBOLS[0];
 }
