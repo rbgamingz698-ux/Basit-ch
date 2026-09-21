@@ -29,6 +29,8 @@ export function formatPktTimeString(date: Date = new Date()): string {
 export function formatPktDateTime(unixSeconds: number): string {
   const date = new Date(unixSeconds * 1000);
   const pkt = getPktDate(date);
+  
+  const dayName = pkt.toLocaleDateString('en-US', { weekday: 'short' });
   const y = pkt.getFullYear();
   const m = String(pkt.getMonth() + 1).padStart(2, '0');
   const d = String(pkt.getDate()).padStart(2, '0');
@@ -40,5 +42,5 @@ export function formatPktDateTime(unixSeconds: number): string {
   hours = hours ? hours : 12; // the hour '0' should be '12'
   const strHours = String(hours).padStart(2, '0');
 
-  return `${y}-${m}-${d} ${strHours}:${minutes} ${ampm} PKT`;
+  return `${dayName}, ${y}-${m}-${d} ${strHours}:${minutes} ${ampm} PKT`;
 }

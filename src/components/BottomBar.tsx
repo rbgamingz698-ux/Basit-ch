@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, Globe, ArrowUpRight, Radio } from 'lucide-react';
 import { SUPPORTED_SYMBOLS } from '../services/marketData';
 import { formatPktTimeString } from '../utils/time';
+import { SymbolLogo } from './SymbolLogo';
 
 interface BottomBarProps {
   currentSymbol: string;
@@ -52,6 +53,7 @@ export const BottomBar: React.FC<BottomBarProps> = ({
                   : 'hover:text-[#d1d4dc] hover:bg-[#1e222d]'
               }`}
             >
+              <SymbolLogo symbol={s.symbol} size="xs" />
               <span>{s.symbol}</span>
               <span className="text-white font-semibold">{displayVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               <span className="text-emerald-400 text-[10px] flex items-center">

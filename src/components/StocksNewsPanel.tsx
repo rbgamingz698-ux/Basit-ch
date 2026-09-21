@@ -295,7 +295,7 @@ export const StocksNewsPanel: React.FC<StocksNewsPanelProps> = ({
             <div className="flex items-center gap-1 font-bold text-sm">
               <span>{overallSentiments.ym.emoji}</span>
               <span className={`text-[10px] font-bold ${overallSentiments.ym.sentiment === 'bull' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {overallSentiments.ym.label}
+                {overallSentiments.ym.sentiment.toUpperCase()}
               </span>
             </div>
           </button>
@@ -316,7 +316,7 @@ export const StocksNewsPanel: React.FC<StocksNewsPanelProps> = ({
             <div className="flex items-center gap-1 font-bold text-sm">
               <span>{overallSentiments.nq.emoji}</span>
               <span className={`text-[10px] font-bold ${overallSentiments.nq.sentiment === 'bull' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {overallSentiments.nq.label}
+                {overallSentiments.nq.sentiment.toUpperCase()}
               </span>
             </div>
           </button>
@@ -337,7 +337,7 @@ export const StocksNewsPanel: React.FC<StocksNewsPanelProps> = ({
             <div className="flex items-center gap-1 font-bold text-sm">
               <span>{overallSentiments.gc.emoji}</span>
               <span className={`text-[10px] font-bold ${overallSentiments.gc.sentiment === 'bull' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {overallSentiments.gc.label}
+                {overallSentiments.gc.sentiment.toUpperCase()}
               </span>
             </div>
           </button>

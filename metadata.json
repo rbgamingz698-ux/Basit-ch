@@ -1,6 +1,6 @@
 {
   "name": "PROFESSIONAL STUDY OF MARKERS DATA AT LIVE +",
-  "description": "Real-time financial charting workstation connected to Yahoo Finance v8 chart API for US30 (^DJI) and NASDAQ (^IXIC) with Smart Money Concepts (FVG, Sessions, Order Blocks, Liquidity Zones), custom Pine Script engine, and live active indicators toggle.",
+  "description": "Real-time financial charting workstation connected to Yahoo Finance v8 chart API for US30 (^DJI) and NASDAQ (^IXIC) with Smart Money Concepts, custom Pine Script engine, and live active indicators toggle.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

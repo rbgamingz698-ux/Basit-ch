@@ -2,6 +2,14 @@ import { CandleColorTheme } from '../types/chart';
 
 export const DEFAULT_CANDLE_THEMES: CandleColorTheme[] = [
   {
+    id: 'default',
+    name: 'Default (Green & Purple)',
+    upColor: '#00FF00',
+    downColor: '#8A2BE2',
+    wickUpColor: '#00FF00',
+    wickDownColor: '#8A2BE2',
+  },
+  {
     id: 'classic',
     name: 'TradingView Classic',
     upColor: '#22ab94',
@@ -52,3 +60,4 @@ export const DEFAULT_CANDLE_THEMES: CandleColorTheme[] = [
 ];
 
 export const DEFAULT_THEME = DEFAULT_CANDLE_THEMES[0];
+

@@ -22,6 +22,7 @@ export interface SymbolInfo {
   pipSize: number;        // point size e.g. 1.0 or 0.0001
   basePrice: number;      // baseline price
   type: 'index' | 'forex' | 'crypto' | 'commodity';
+  logo?: string;          // Added logo field
 }
 
 export interface CandleData {

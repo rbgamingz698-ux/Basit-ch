@@ -1,375 +1,95 @@
-import { useAuth } from './components/AuthProvider';
-import { LoginPage } from './components/LoginPage';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TopBar } from './components/TopBar';
-import { TradingViewChart } from './components/TradingViewChart';
-import { BottomBar } from './components/BottomBar';
 import { StockDetailPanel, LeftPanelTab } from './components/StockDetailPanel';
+import { TradingViewChart } from './components/TradingViewChart';
 import { SymbolSearchModal } from './components/SymbolSearchModal';
-import { TenChartGridModal } from './components/TenChartGridModal';
-import { CandleColorModal } from './components/CandleColorModal';
-import { ChartSettingsModal } from './components/ChartSettingsModal';
-import { IndicatorLibraryModal } from './components/indicators/IndicatorLibraryModal';
-import { IndicatorSettingsModal } from './components/indicators/IndicatorSettingsModal';
-import { PineScriptEditorModal } from './components/indicators/PineScriptEditorModal';
-import { NewsNotification } from './components/NewsNotification';
-import { 
-  CandleColorTheme, 
-  CandleData, 
-  ChartType, 
-  Timeframe, 
-  SymbolInfo 
-} from './types/chart';
-import { 
-  IndicatorInstance, 
-  IndicatorDefinition, 
-  SavedCustomScript 
-} from './types/indicators';
-import { 
-  fetchCandles, 
-  getSymbolInfo, 
-  SUPPORTED_SYMBOLS 
-} from './services/marketData';
-import { DEFAULT_THEME } from './utils/candleColors';
-import { PineScriptResult } from './services/pineScriptInterpreter';
+import { AuthProvider } from './components/AuthProvider';
+
+import { Timeframe, ChartType, CandleColorTheme, CandleData } from './types/chart';
+import { getSymbolInfo, fetchMarketData } from './services/marketData';
+import { DEFAULT_CANDLE_THEMES } from './utils/candleColors';
 import { Language } from './utils/thaiTranslation';
+import { useSymbolChangeDetector } from './utils/symbolChangeDetector';
 
-
-const INITIAL_INDICATORS: IndicatorInstance[] = [
-  {
-    instanceId: 'inst-sessions-1',
-    definitionId: 'sessions',
-    name: 'Trading Sessions',
-    category: 'SMART_MONEY_CONCEPTS',
-    enabled: true,
-    visible: true,
-    inputs: {
-      utcOffset: 5,
-      showLabels: false,
-      sessionLabelName: true,
-      sessionLabelHours: true,
-      sessionLabelHighLow: true,
-      labelHighlightBg: true,
-    },
-    style: {
-      asiaColor: '#2962FF',
-      londonColor: '#00C853',
-      nyColor: '#FF1744',
-    },
-    visibility: {
-      seconds: true,
-      minutes: true,
-      hours: true,
-      days: true,
-      weeks: true,
-      months: true,
-    },
-  },
-  {
-    instanceId: 'inst-orb-1',
-    definitionId: 'volumatic_orb',
-    name: 'Volumatic ORB 15min',
-    category: 'VOLUMATIC',
-    enabled: false,
-    visible: false,
-    inputs: {
-      startTime: '06:30',
-      endTime: '06:45',
-      utcOffset: 5,
-      showBreakoutSignals: true,
-      showLabels: false,
-      orbLabelTitle: true,
-      orbLabelPrice: true,
-      labelHighlightBg: true,
-    },
-    style: {
-      rangeColor: '#E040FB',
-      bullishBreakColor: '#00FF68',
-      bearishBreakColor: '#FF0008',
-      opacity: 0.08,
-    },
-    visibility: {
-      seconds: true,
-      minutes: true,
-      hours: true,
-      days: true,
-      weeks: true,
-      months: true,
-    },
-  },
-];
-
-export function App() {
-  const { user, loading } = useAuth();
-  // Core Chart State
-  const [symbol, setSymbol] = useState<string>('US30');
+function TerminalApp() {
+  const [symbol, setSymbol] = useState<string>('DJI');
   const [timeframe, setTimeframe] = useState<Timeframe>('5m');
   const [chartType, setChartType] = useState<ChartType>('Candlestick');
-  const [candleTheme, setCandleTheme] = useState<CandleColorTheme>(DEFAULT_THEME);
-  const [language, setLanguage] = useState<Language>('EN');
+  const [candleTheme] = useState<CandleColorTheme>(DEFAULT_CANDLE_THEMES[0]);
+  const [language] = useState<Language>('EN');
 
-  // Market Data State
-  const [candles, setCandles] = useState<CandleData[]>([]);
-  const [lastPrice, setLastPrice] = useState<number>(51778.04);
-  const [priceChange, setPriceChange] = useState<number>(0);
-  const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
-  const [dataSource, setDataSource] = useState<string>('Yahoo Finance');
-  const [cacheSecondsLeft, setCacheSecondsLeft] = useState<number>(60);
+  // Panel collapse states
+  const [isStockDetailCollapsed, setIsStockDetailCollapsed] = useState<boolean>(false);
+  const [leftTab, setLeftTab] = useState<LeftPanelTab>('overview');
 
-  // Indicators State
-  const [activeIndicators, setActiveIndicators] = useState<IndicatorInstance[]>(INITIAL_INDICATORS);
-  const [savedCustomScripts, setSavedCustomScripts] = useState<SavedCustomScript[]>([]);
-  const [activeSettingsInstance, setActiveSettingsInstance] = useState<IndicatorInstance | null>(null);
-
-  // Left Panel State (Stock Overview, Stocks News, Economic Calendar)
-  const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState<boolean>(false);
-  const [leftPanelTab, setLeftPanelTab] = useState<LeftPanelTab>('overview');
-
-  // Toggle Left Panel Tabs handlers
-  const handleToggleStocksNews = () => {
-    if (isLeftPanelCollapsed) {
-      setIsLeftPanelCollapsed(false);
-      setLeftPanelTab('news');
-    } else if (leftPanelTab === 'news') {
-      setIsLeftPanelCollapsed(true);
-    } else {
-      setLeftPanelTab('news');
-    }
-  };
-
-  const handleToggleCalendar = () => {
-    if (isLeftPanelCollapsed) {
-      setIsLeftPanelCollapsed(false);
-      setLeftPanelTab('calendar');
-    } else if (leftPanelTab === 'calendar') {
-      setIsLeftPanelCollapsed(true);
-    } else {
-      setLeftPanelTab('calendar');
-    }
-  };
-
-  const handleToggleOverview = () => {
-    if (isLeftPanelCollapsed) {
-      setIsLeftPanelCollapsed(false);
-      setLeftPanelTab('overview');
-    } else if (leftPanelTab === 'overview') {
-      setIsLeftPanelCollapsed(true);
-    } else {
-      setLeftPanelTab('overview');
-    }
-  };
-
-  // Modals State
+  // Modals
   const [isSymbolSearchOpen, setIsSymbolSearchOpen] = useState<boolean>(false);
-  const [isCandleColorModalOpen, setIsCandleColorModalOpen] = useState<boolean>(false);
-  const [isIndicatorLibraryOpen, setIsIndicatorLibraryOpen] = useState<boolean>(false);
-  const [isChartSettingsOpen, setIsChartSettingsOpen] = useState<boolean>(false);
-  const [isPineEditorOpen, setIsPineEditorOpen] = useState<boolean>(false);
-  const [chartSettings, setChartSettings] = useState<any>({});
 
-  // News Notification State
-  const [notificationItem, setNotificationItem] = useState<{
-    title: string;
-    publisher?: string;
-    link?: string;
-    uuid?: string;
-    pktDateTime?: string;
-    impact?: string;
-  } | null>(null);
+  // Candles data state
+  const [candles, setCandles] = useState<CandleData[]>([]);
+  const [, setIsLoading] = useState<boolean>(false);
 
-  // Price crossing alert handler
-  const handleTriggerAlert = useCallback((alert: any) => {
-    setNotificationItem({
-      title: `PRICE ALERT: ${alert.symbol}`,
-      publisher: 'Drawing Engine',
-      pktDateTime: `Price reached ${alert.targetPrice.toFixed(2)} - ${alert.message || 'Target hit'}`,
-      impact: 'High',
-    });
+  const symbolInfo = useMemo(() => getSymbolInfo(symbol), [symbol]);
+
+  const generateFallbackCandles = useCallback(() => {
+    const generated: CandleData[] = [];
+    let baseP = symbolInfo.basePrice;
+    const now = Math.floor(Date.now() / 300000) * 300000;
+    for (let i = 60; i > 0; i--) {
+      const time = now - i * 300000;
+      const open = baseP + (Math.random() * 10 - 5);
+      const close = open + (Math.random() * 14 - 7);
+      const high = Math.max(open, close) + Math.random() * 5;
+      const low = Math.min(open, close) - Math.random() * 5;
+      const volume = Math.round(Math.random() * 500 + 100);
+      generated.push({ time, open, high, low, close, volume });
+      baseP = close;
+    }
+    setCandles(generated);
+  }, [symbolInfo.basePrice]);
+
+  // Fetch market data using fetchMarketData from marketData.ts
+  const fetchData = useCallback(async (force = false) => {
+    setIsLoading(true);
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
-        const ctx = new AudioCtx();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.setValueAtTime(880, ctx.currentTime);
-        gain.gain.setValueAtTime(0.18, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.4);
-      }
-    } catch {}
-  }, []);
-
-  const handleSetAlert = useCallback(
-    (drawing: any) => {
-      // Alert functionality removed
-    },
-    [symbol, lastPrice]
-  );
-
-  const symbolInfo: SymbolInfo = getSymbolInfo(symbol);
-
-  // Fetch candle data for current symbol & timeframe
-  const loadCandleData = useCallback(async (forceRefresh = false) => {
-    setIsLoadingData(true);
-    try {
-      const result = await fetchCandles(symbol, timeframe, forceRefresh);
-      if (result.candles && result.candles.length > 0) {
+      const [baseSymbol, session] = symbol.split('-');
+      const result = await fetchMarketData(baseSymbol, timeframe, force, session as 'ETH' | 'RTH' | undefined);
+      if (result && result.candles && result.candles.length > 0) {
         setCandles(result.candles);
-        const latestCandle = result.candles[result.candles.length - 1];
-        const latestPrice = result.regularMarketPrice ?? latestCandle.close;
-        setLastPrice(latestPrice);
-
-        const prevClose = result.previousClose ?? result.candles[0].open;
-        if (prevClose && prevClose > 0) {
-          setPriceChange(latestPrice - prevClose);
-        } else {
-          setPriceChange(0);
-        }
-
-        setDataSource(result.source || 'Yahoo Finance');
-        setCacheSecondsLeft(60);
+      } else {
+        generateFallbackCandles();
       }
-    } catch (err) {
-      console.error('Failed to load candle data:', err);
+    } catch {
+      generateFallbackCandles();
     } finally {
-      setIsLoadingData(false);
+      setIsLoading(false);
     }
-  }, [symbol, timeframe]);
+  }, [symbol, timeframe, generateFallbackCandles]);
 
-  // Initial and reactive load
   useEffect(() => {
-    loadCandleData();
-  }, [loadCandleData]);
+    fetchData(false);
+    const interval = setInterval(() => fetchData(false), 30000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
-  // Countdown timer for data cache refresh
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCacheSecondsLeft((prev) => {
-        if (prev <= 1) {
-          loadCandleData();
-          return 60;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  const lastCandle = candles[candles.length - 1];
+  const lastPrice = lastCandle ? lastCandle.close : symbolInfo.basePrice;
+  const prevCandle = candles[candles.length - 2];
+  const prevClose = prevCandle ? prevCandle.close : symbolInfo.basePrice;
+  const priceChange = lastPrice - prevClose;
 
-    return () => clearInterval(timer);
-  }, [loadCandleData]);
+  const chartRef = useRef<{ resetToLive: () => void }>(null);
 
-  // Indicator Handlers
-  const handleAddIndicator = (def: IndicatorDefinition) => {
-    const newInstance: IndicatorInstance = {
-      instanceId: `inst-${def.id}-${Date.now()}`,
-      definitionId: def.id,
-      name: def.name,
-      category: def.category,
-      enabled: true,
-      visible: true,
-      inputs: { ...def.defaultInputs },
-      style: { ...def.defaultStyle },
-      visibility: { ...def.defaultVisibility },
-      scriptCode: def.scriptCode,
-    };
-    setActiveIndicators((prev) => [...prev, newInstance]);
-  };
-
-  const handleRemoveIndicator = (instanceId: string) => {
-    setActiveIndicators((prev) => prev.filter((i) => i.instanceId !== instanceId));
-    if (activeSettingsInstance?.instanceId === instanceId) {
-      setActiveSettingsInstance(null);
+  useSymbolChangeDetector(symbol, useCallback(() => {
+    if (chartRef.current) {
+      chartRef.current.resetToLive();
     }
-  };
-
-  const handleToggleIndicatorVisibility = (instanceId: string) => {
-    setActiveIndicators((prev) =>
-      prev.map((inst) =>
-        inst.instanceId === instanceId
-          ? { ...inst, visible: !inst.visible, enabled: !inst.visible }
-          : inst
-      )
-    );
-  };
-
-  const handleToggleIndicatorLabels = (instanceId: string) => {
-    setActiveIndicators((prev) =>
-      prev.map((inst) => {
-        if (inst.instanceId === instanceId) {
-          const currentShow = inst.inputs.showLabels ?? false;
-          return {
-            ...inst,
-            inputs: { ...inst.inputs, showLabels: !currentShow },
-          };
-        }
-        return inst;
-      })
-    );
-  };
-
-  const handleOpenIndicatorSettings = (instance: IndicatorInstance) => {
-    setActiveSettingsInstance(instance);
-  };
-
-  const handleSaveIndicatorSettings = (updated: IndicatorInstance) => {
-    setActiveIndicators((prev) =>
-      prev.map((inst) => (inst.instanceId === updated.instanceId ? updated : inst))
-    );
-    setActiveSettingsInstance(null);
-  };
-
-  // Custom Pine Script Handlers
-  const handleSaveCustomScript = (script: SavedCustomScript) => {
-    setSavedCustomScripts((prev) => {
-      const idx = prev.findIndex((s) => s.id === script.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = script;
-        return next;
-      }
-      return [...prev, script];
-    });
-  };
-
-  const handleDeleteCustomScript = (scriptId: string) => {
-    setSavedCustomScripts((prev) => prev.filter((s) => s.id !== scriptId));
-  };
-
-  const handleRunCustomScript = (script: { name: string; description: string; code: string }) => {
-    const newInstance: IndicatorInstance = {
-      instanceId: `inst-custom-${Date.now()}`,
-      definitionId: `custom-${Date.now()}`,
-      name: script.name || 'Custom Script',
-      category: 'CUSTOM',
-      enabled: true,
-      visible: true,
-      inputs: {},
-      style: { plotColor: '#2962FF' },
-      visibility: { seconds: true, minutes: true, hours: true, days: true, weeks: true, months: true },
-      scriptCode: script.code,
-    };
-    setActiveIndicators((prev) => [...prev, newInstance]);
-  };
-
-  // Trigger manual news notification popup
-  const handleTriggerNewsPopup = () => {
-    setNotificationItem({
-      title: 'US CPI Inflation Data Release Incoming',
-      publisher: 'Bureau of Labor Statistics / ForexFactory',
-      pktDateTime: 'PKT 18:30 (Today)',
-      impact: 'High',
-      link: 'https://www.forexfactory.com/',
-      uuid: `news-toast-${Date.now()}`,
-    });
-  };
-
-  if (loading) return <div className="h-screen flex items-center justify-center bg-[#131722] text-white">Loading...</div>;
-  if (!user) return <LoginPage />;
+  }, []));
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#131722] text-[#d1d4dc] font-sans antialiased select-none">
-      {/* Top Application Bar */}
+    <div className="flex flex-col h-screen w-screen bg-[#000000] text-[#d1d4dc] font-mono overflow-hidden select-none">
+      
+      {/* Top Navigation Bar */}
       <TopBar
         symbol={symbol}
         onSelectSymbol={(sym) => setSymbol(sym)}
@@ -378,140 +98,58 @@ export function App() {
         onChangeTimeframe={(tf) => setTimeframe(tf)}
         chartType={chartType}
         onChangeChartType={(ct) => setChartType(ct)}
-        candleTheme={candleTheme}
-        onOpenCandleColorModal={() => setIsCandleColorModalOpen(true)}
-        onOpenIndicatorLibrary={() => setIsIndicatorLibraryOpen(true)}
-        lastPrice={lastPrice}
-        priceChange={priceChange}
-        onRefreshData={() => loadCandleData(true)}
-        isLoadingData={isLoadingData}
-        dataSource={dataSource}
-        cacheSecondsLeft={cacheSecondsLeft}
         language={language}
-        onChangeLanguage={(lang) => setLanguage(lang)}
-        onTriggerNewsPopup={handleTriggerNewsPopup}
-        onToggleStocksNews={handleToggleStocksNews}
-        isStocksNewsOpen={!isLeftPanelCollapsed && leftPanelTab === 'news'}
-        onToggleCalendar={handleToggleCalendar}
-        isCalendarOpen={!isLeftPanelCollapsed && leftPanelTab === 'calendar'}
-        onToggleStockDetail={handleToggleOverview}
-        isStockDetailOpen={!isLeftPanelCollapsed && leftPanelTab === 'overview'}
+        onToggleStockDetail={() => setIsStockDetailCollapsed(!isStockDetailCollapsed)}
+        isStockDetailOpen={!isStockDetailCollapsed}
       />
 
-      {/* Main Content Workspace */}
+      {/* Main Workstation Body */}
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Left Unified Panel: Stock Overview, Stocks News, & Economic Calendar */}
+        
+        {/* Left Stock Detail / Overview / News / Calendar Panel */}
         <StockDetailPanel
           symbol={symbol}
           lastPrice={lastPrice}
           priceChange={priceChange}
           candles={candles}
-          isCollapsed={isLeftPanelCollapsed}
-          onToggleCollapse={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
+          isCollapsed={isStockDetailCollapsed}
+          onToggleCollapse={() => setIsStockDetailCollapsed(!isStockDetailCollapsed)}
           onSelectSymbol={(sym) => setSymbol(sym)}
-          onNewNews={(item) => setNotificationItem(item)}
-          activeTab={leftPanelTab}
-          onTabChange={(tab) => setLeftPanelTab(tab)}
+          activeTab={leftTab}
+          onTabChange={(tab) => setLeftTab(tab)}
         />
 
-
-
-        {/* Center & Right: Full-Screen Interactive TradingView Chart */}
-        <div className="flex-1 h-full relative overflow-hidden bg-[#131722]">
+        {/* Main Chart Canvas Area */}
+        <div className="flex-1 flex flex-col relative overflow-hidden bg-[#000000]">
           <TradingViewChart
+            ref={chartRef}
             symbolInfo={symbolInfo}
             timeframe={timeframe}
             chartType={chartType}
             candles={candles}
             candleTheme={candleTheme}
-            activeIndicators={activeIndicators}
-            onToggleIndicatorVisibility={handleToggleIndicatorVisibility}
-            onToggleIndicatorLabels={handleToggleIndicatorLabels}
-            onRemoveIndicator={handleRemoveIndicator}
-            onOpenIndicatorSettings={handleOpenIndicatorSettings}
           />
         </div>
       </div>
 
-      {/* Bottom Status & Ticker Bar */}
-      <BottomBar
-        currentSymbol={symbol}
-        onSelectSymbol={(sym) => setSymbol(sym)}
-        lastPrice={lastPrice}
-      />
-
-      {/* Modals & Dialogs */}
+      {/* Symbol Search Modal */}
       <SymbolSearchModal
         isOpen={isSymbolSearchOpen}
         onClose={() => setIsSymbolSearchOpen(false)}
+        onSelectSymbol={(sym) => setSymbol(sym)}
         currentSymbol={symbol}
-        onSelectSymbol={(sym) => {
-          setSymbol(sym);
-          setIsSymbolSearchOpen(false);
-        }}
       />
 
-      <CandleColorModal
-        isOpen={isCandleColorModalOpen}
-        onClose={() => setIsCandleColorModalOpen(false)}
-        currentTheme={candleTheme}
-        onChangeTheme={(th) => setCandleTheme(th)}
-      />
 
-      <ChartSettingsModal
-        isOpen={isChartSettingsOpen}
-        onClose={() => setIsChartSettingsOpen(false)}
-        settings={chartSettings}
-        onChangeSettings={(s) => setChartSettings(s)}
-      />
-
-      <IndicatorLibraryModal
-        isOpen={isIndicatorLibraryOpen}
-        onClose={() => setIsIndicatorLibraryOpen(false)}
-        activeIndicators={activeIndicators}
-        onAddIndicator={handleAddIndicator}
-        onRemoveIndicator={handleRemoveIndicator}
-        onToggleIndicatorVisibility={handleToggleIndicatorVisibility}
-        onOpenSettings={handleOpenIndicatorSettings}
-        candles={candles}
-        savedCustomScripts={savedCustomScripts}
-        onSaveCustomScript={handleSaveCustomScript}
-        onDeleteCustomScript={handleDeleteCustomScript}
-        onRunCustomScript={handleRunCustomScript}
-      />
-
-      <IndicatorSettingsModal
-        isOpen={activeSettingsInstance !== null}
-        onClose={() => setActiveSettingsInstance(null)}
-        instance={activeSettingsInstance}
-        onSave={handleSaveIndicatorSettings}
-      />
-
-      <PineScriptEditorModal
-        isOpen={isPineEditorOpen}
-        onClose={() => setIsPineEditorOpen(false)}
-        candles={candles}
-        onApplyScriptResult={(res: PineScriptResult) => {
-          if (res && res.title) {
-            handleRunCustomScript({
-              name: res.title,
-              description: 'Custom Pine Script Execution',
-              code: '',
-            });
-          }
-        }}
-        onSaveScript={handleSaveCustomScript}
-      />
-
-      {/* News Notification Toast */}
-      {notificationItem && (
-        <NewsNotification
-          item={notificationItem}
-          onClose={() => setNotificationItem(null)}
-          durationSeconds={12}
-        />
-      )}
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <TerminalApp />
+    </AuthProvider>
   );
 }
 
