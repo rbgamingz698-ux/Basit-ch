@@ -83,6 +83,33 @@ export const TradingViewChart = React.forwardRef<
     timeStr: string;
   } | null>(null);
 
+  // Candle Countdown Timer
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(0);
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      if (!candles || candles.length === 0) return;
+      const lastCandle = candles[candles.length - 1];
+      const tfLower = timeframe.toLowerCase();
+      const tfSecs = tfLower === '1m' ? 60 : tfLower === '5m' ? 300 : tfLower === '15m' ? 900 : tfLower === '1h' ? 3600 : tfLower === '4h' ? 14400 : 86400;
+      
+      const nowSecs = Math.floor(Date.now() / 1000);
+      const nextCandleTime = lastCandle.time + tfSecs;
+      const remaining = nextCandleTime - nowSecs;
+      setSecondsRemaining(Math.max(0, remaining));
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [candles, timeframe]);
+
+  const formatCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   const candlesRef = useRef<CandleData[]>(candles);
   candlesRef.current = candles;
 
@@ -116,14 +143,12 @@ export const TradingViewChart = React.forwardRef<
           width: 1,
           style: 3,
           labelBackgroundColor: '#FFFFFF',
-          labelTextColor: '#000000',
         },
         horzLine: {
           color: '#FFFFFF',
           width: 1,
           style: 3,
           labelBackgroundColor: '#FFFFFF',
-          labelTextColor: '#000000',
         },
       },
       rightPriceScale: {

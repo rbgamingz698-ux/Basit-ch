@@ -190,3 +190,5 @@ export interface StockNewsItem {
   formattedTime: string;
   formattedDate: string;
 }
+
+

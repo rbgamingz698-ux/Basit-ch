@@ -503,9 +503,9 @@ export const StocksNewsPanel: React.FC<StocksNewsPanelProps> = ({
                     </span>
 
                     {/* Specific impacted user symbols */}
-                    {impact.impactedSymbols.map((sym) => (
+                    {impact.impactedSymbols.map((sym, symIdx) => (
                       <span
-                        key={sym.symbol}
+                        key={`${article.uuid}-${sym.symbol}-${symIdx}`}
                         className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border ${
                           sym.sentiment === 'bull'
                             ? 'bg-emerald-950/60 text-emerald-400 border-emerald-700/40'

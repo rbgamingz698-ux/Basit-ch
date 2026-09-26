@@ -297,6 +297,8 @@ export const StockDetailPanel: React.FC<StockDetailPanelProps> = ({
               </div>
             </div>
 
+
+
             {/* Key Data Points */}
             <div className="space-y-2">
               <div className="text-[11px] font-bold text-white uppercase tracking-wider px-1">Key Data Points</div>

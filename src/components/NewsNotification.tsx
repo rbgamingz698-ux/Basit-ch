@@ -120,9 +120,9 @@ export const NewsNotification: React.FC<NewsNotificationProps> = ({
         {/* Affected Symbols Chips */}
         {impact.impactedSymbols.length > 0 && (
           <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-            {impact.impactedSymbols.map((sym) => (
+            {impact.impactedSymbols.map((sym, idx) => (
               <span
-                key={sym.symbol}
+                key={`${sym.symbol}-${idx}`}
                 className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${
                   sym.sentiment === 'bull'
                     ? 'bg-emerald-950/60 text-emerald-400 border-emerald-700/40'

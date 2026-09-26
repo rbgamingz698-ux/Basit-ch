@@ -31,6 +31,35 @@ export function isWithinTradingHours(timestampSeconds: number): boolean {
   return true;
 }
 
+export function isWithinRTH(timestampSeconds: number): boolean {
+  const date = new Date(timestampSeconds * 1000);
+  const nyStr = date.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+  });
+  const parts = nyStr.split(', ');
+  if (parts.length < 2) return true;
+  const weekday = parts[0];
+  const timePart = parts[1];
+  const [hourStr, minStr] = timePart.split(':');
+  const hour = parseInt(hourStr, 10);
+  const minute = parseInt(minStr, 10);
+  const timeInMins = hour * 60 + minute;
+
+  if (weekday === 'Sat' || weekday === 'Sun') {
+    return false;
+  }
+
+  // RTH: 9:30 AM (570 mins) to 4:00 PM (960 mins) Eastern Time
+  const rthStart = 9 * 60 + 30; // 570
+  const rthEnd = 16 * 60; // 960
+
+  return timeInMins >= rthStart && timeInMins <= rthEnd;
+}
+
 export function isMarketOpen(): boolean {
   const now = new Date();
   const pktMs = now.getTime() + 5.5 * 3600 * 1000;
@@ -208,10 +237,13 @@ export async function fetchMarketData(
         Number.isFinite(c)
       ) {
         const date = new Date(t * 1000);
-        // If ETH (Extended Trading Hours), do NOT filter by isWithinTradingHours
-        // If RTH (Regular Trading Hours), apply filter
-        const shouldFilter = session !== 'ETH';
-        if (!shouldFilter || isWithinTradingHours(t)) {
+        // If ETH (Extended Trading Hours), show whole chart (with weekend closure filter)
+        // If RTH (Regular Trading Hours), filter strictly to 9:30 AM - 4:00 PM Eastern Time
+        const passFilter = session === 'RTH' 
+          ? isWithinRTH(t) 
+          : isWithinTradingHours(t);
+          
+        if (passFilter) {
           const candleRange = Math.abs(h - l);
           const candleBody = Math.abs(c - o);
           const computedVol = Math.max(250, Math.round(candleRange * 650 + candleBody * 950 + 400 + ((t % 11) * 60)));
